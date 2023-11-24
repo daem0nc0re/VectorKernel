@@ -192,7 +192,6 @@ NTSTATUS OnDeviceControl(
 
 		if (!NT_SUCCESS(ntstatus))
 		{
-			*(HANDLE*)Irp->AssociatedIrp.SystemBuffer = nullptr;
 			KdPrint((DRIVER_PREFIX "Failed to PsLookupProcessByProcessId() (NTSTATUS = 0x%08X).\n", ntstatus));
 			break;
 		}
