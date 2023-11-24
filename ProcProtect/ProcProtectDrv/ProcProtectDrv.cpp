@@ -16,8 +16,8 @@ ULONG g_ProtectionOffset = 0u;
 //
 // Ioctl code definition
 //
-#define IOCTL_UPDATE_PROTECTION_LEVEL CTL_CODE(0x8000, 0x0300, METHOD_BUFFERED, FILE_ANY_ACCESS)
-#define IOCTL_GET_PROTECTION_LEVEL CTL_CODE(0x8000, 0x0301, METHOD_BUFFERED, FILE_ANY_ACCESS)
+#define IOCTL_SET_PROTECTION CTL_CODE(0x8000, 0x0300, METHOD_BUFFERED, FILE_ANY_ACCESS)
+#define IOCTL_GET_PROTECTION CTL_CODE(0x8000, 0x0301, METHOD_BUFFERED, FILE_ANY_ACCESS)
 
 //
 // Kernel struct and enum definition
@@ -348,7 +348,7 @@ NTSTATUS OnDeviceControl(
 
 	switch (dic.IoControlCode)
 	{
-	case IOCTL_UPDATE_PROTECTION_LEVEL:
+	case IOCTL_SET_PROTECTION:
 		if (dic.InputBufferLength < sizeof(PROTECTION_INFO))
 		{
 			ntstatus = STATUS_BUFFER_TOO_SMALL;
@@ -395,7 +395,7 @@ NTSTATUS OnDeviceControl(
 
 		break;
 
-	case IOCTL_GET_PROTECTION_LEVEL:
+	case IOCTL_GET_PROTECTION:
 		if (dic.InputBufferLength < sizeof(ULONG))
 		{
 			ntstatus = STATUS_BUFFER_TOO_SMALL;
