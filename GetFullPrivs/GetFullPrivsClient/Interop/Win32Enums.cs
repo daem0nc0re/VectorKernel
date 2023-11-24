@@ -49,6 +49,12 @@ namespace GetFullPrivsClient.Interop
         GENERIC_READ = 0x80000000,
     }
 
+    internal enum BOOLEAN : byte
+    {
+        FALSE = 0,
+        TRUE
+    }
+
     internal enum FILE_ATTRIBUTE_FLAGS
     {
         READONLY = 0x00000001,
@@ -133,5 +139,40 @@ namespace GetFullPrivsClient.Interop
         OBJ_KERNEL_HANDLE = 0x00000200,
         OBJ_FORCE_ACCESS_CHECK = 0x00000400,
         OBJ_VALID_ATTRIBUTES = 0x000007F2
+    }
+
+    [Flags]
+    internal enum PROCESS_CREATION_FLAGS : uint
+    {
+        DEBUG_PROCESS = 0x00000001,
+        DEBUG_ONLY_THIS_PROCESS = 0x00000002,
+        CREATE_SUSPENDED = 0x00000004,
+        DETACHED_PROCESS = 0x00000008,
+        CREATE_NEW_CONSOLE = 0x00000010,
+        CREATE_NEW_PROCESS_GROUP = 0x00000200,
+        CREATE_UNICODE_ENVIRONMENT = 0x00000400,
+        CREATE_SEPARATE_WOW_VDM = 0x00000800,
+        CREATE_SHARED_WOW_VDM = 0x00001000,
+        INHERIT_PARENT_AFFINITY = 0x00010000,
+        CREATE_PROTECTED_PROCESS = 0x00040000,
+        EXTENDED_STARTUPINFO_PRESENT = 0x00080000,
+        CREATE_BREAKAWAY_FROM_JOB = 0x01000000,
+        CREATE_PRESERVE_CODE_AUTHZ_LEVEL = 0x02000000,
+        CREATE_DEFAULT_ERROR_MODE = 0x04000000,
+        CREATE_NO_WINDOW = 0x08000000
+    }
+
+    internal enum SECURITY_IMPERSONATION_LEVEL
+    {
+        Anonymous,
+        Identification,
+        Impersonation,
+        Delegation
+    }
+
+    internal enum TOKEN_TYPE
+    {
+        Primary = 1,
+        Impersonation
     }
 }

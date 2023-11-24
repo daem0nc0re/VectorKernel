@@ -9,7 +9,7 @@ namespace GetFullPrivsClient.Library
 
     internal class Modules
     {
-        public static bool CreateFullPrivilegedProcess()
+        public static bool CreateFullPrivilegedProcess(string command)
         {
             NTSTATUS ntstatus;
             var bSuccess = false;
@@ -21,6 +21,11 @@ namespace GetFullPrivsClient.Library
             do
             {
                 IntPtr hDevice;
+                IntPtr hToken;
+                var startupInfo = new STARTUPINFO
+                {
+                    cb = Marshal.SizeOf(typeof(STARTUPINFO))
+                };
 
                 using (var objectAttributes = new OBJECT_ATTRIBUTES(
                     Globals.SYMLINK_PATH,
@@ -71,8 +76,45 @@ namespace GetFullPrivsClient.Library
                 else
                 {
                     Console.WriteLine("[+] Got full privileges.");
-                    Console.WriteLine("-- DEBUGGER BREAK --");
-                    Console.ReadLine();
+                }
+
+                Console.WriteLine("[>] Trying to create new proccess.");
+
+                hToken = Utilities.DuplicateCurrentToken(
+                    TOKEN_TYPE.Primary,
+                    SECURITY_IMPERSONATION_LEVEL.Anonymous);
+
+                if (hToken == IntPtr.Zero)
+                {
+                    Console.WriteLine("[-] Failed to duplicate current token.");
+                    break;
+                }
+
+                bSuccess = NativeMethods.CreateProcessAsUser(
+                    hToken,
+                    null,
+                    command,
+                    IntPtr.Zero,
+                    IntPtr.Zero,
+                    false,
+                    PROCESS_CREATION_FLAGS.CREATE_BREAKAWAY_FROM_JOB | PROCESS_CREATION_FLAGS.CREATE_NEW_CONSOLE,
+                    IntPtr.Zero,
+                    Environment.CurrentDirectory,
+                    in startupInfo,
+                    out PROCESS_INFORMATION processInfo);
+
+                if (!bSuccess)
+                {
+                    Console.WriteLine("[-] Failed to CreateProcessAsUser() (Error = 0x{0})", Marshal.GetLastWin32Error().ToString("X8"));
+                }
+                else
+                {
+                    Console.WriteLine("[+] New process is executed successfully.");
+                    Console.WriteLine("    [*] Process ID : {0}", processInfo.dwProcessId);
+                    Console.WriteLine("    [*] Thread ID  : {0}", processInfo.dwThreadId);
+
+                    NativeMethods.NtClose(processInfo.hThread);
+                    NativeMethods.NtClose(processInfo.hProcess);
                 }
             } while (false);
 
