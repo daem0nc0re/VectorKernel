@@ -41,7 +41,7 @@ namespace GetProcHandleClient.Library
                 IntPtr hDevice;
 
                 using (var objectAttributes = new OBJECT_ATTRIBUTES(
-                    Header.SYMLINK_PATH,
+                    Globals.SYMLINK_PATH,
                     OBJECT_ATTRIBUTES_FLAGS.OBJ_CASE_INSENSITIVE))
                 {
                     ntstatus = NativeMethods.NtCreateFile(
@@ -60,12 +60,12 @@ namespace GetProcHandleClient.Library
 
                 if (ntstatus != Win32Consts.STATUS_SUCCESS)
                 {
-                    Console.WriteLine("[-] Failed to open {0} (NTSTATUS = 0x{1}).", Header.SYMLINK_PATH, ntstatus.ToString("X8"));
+                    Console.WriteLine("[-] Failed to open {0} (NTSTATUS = 0x{1}).", Globals.SYMLINK_PATH, ntstatus.ToString("X8"));
                     break;
                 }
                 else
                 {
-                    Console.WriteLine("[+] Got a handle to {0} (Handle = 0x{1})", Header.SYMLINK_PATH, hDevice.ToString("X"));
+                    Console.WriteLine("[+] Got a handle to {0} (Handle = 0x{1})", Globals.SYMLINK_PATH, hDevice.ToString("X"));
                 }
 
                 ntstatus = NativeMethods.NtDeviceIoControlFile(
@@ -74,7 +74,7 @@ namespace GetProcHandleClient.Library
                     IntPtr.Zero,
                     IntPtr.Zero,
                     out IO_STATUS_BLOCK _,
-                    Header.IOCTL_GET_PROC_HANDLE,
+                    Globals.IOCTL_GET_PROC_HANDLE,
                     pInBuffer,
                     4u,
                     pOutBuffer,

@@ -17,11 +17,11 @@ namespace GetProcHandleClient.Library
             var bSuccess = false;
             var startupInfoEx = new STARTUPINFOEX
             {
-                lpAttributeList = IntPtr.Zero,
                 StartupInfo = new STARTUPINFO
                 {
                     cb = Marshal.SizeOf(typeof(STARTUPINFOEX))
-                }
+                },
+                lpAttributeList = IntPtr.Zero
             };
             newProcessId = 0;
             newThreadId = 0;
