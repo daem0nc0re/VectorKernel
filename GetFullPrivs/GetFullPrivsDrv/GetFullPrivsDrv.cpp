@@ -76,27 +76,44 @@ NTSTATUS DriverEntry(
 		}
 		else
 		{
-			if (versionInfo.dwMajorVersion < 6)
+			KdPrint((DRIVER_PREFIX "OS Version - %u.%u.%u\n",
+				versionInfo.dwMajorVersion,
+				versionInfo.dwMinorVersion,
+				versionInfo.dwBuildNumber));
+
+			// _SEP_TOKEN_PRIVILEGES was introduced since Windows Vista
+			if ((versionInfo.dwMajorVersion == 6))
 			{
-				// Older than Windows Vista does not have _SEP_TOKEN_PRIVILEGE
-				ntstatus = STATUS_NOT_SUPPORTED;
-				KdPrint((DRIVER_PREFIX "Failed to get OS version information (NTSTATUS = 0x%08X).\n", ntstatus));
-				break;
+				if (versionInfo.dwMinorVersion < 2)
+				{
+					// From Windows Vista to Windows 7 SP1
+					g_UserAndGroupCountOffset = 0x78;
+					g_UserAndGroupsOffset = 0x90;
+					g_IntegrityLevelIndexOffset = 0xC8;
+				}
+				else
+				{
+					// From Windows 8 to Windows 8.1
+					g_UserAndGroupCountOffset = 0x7C;
+					g_UserAndGroupsOffset = 0x98;
+					g_IntegrityLevelIndexOffset = 0xD0;
+				}
 			}
-			else if ((versionInfo.dwMajorVersion == 6) && (versionInfo.dwMinorVersion < 2))
+			else if (versionInfo.dwMajorVersion == 10)
 			{
-				// Older than Windows 8 or Server 2012
-				g_UserAndGroupCountOffset = 0x78;
-				g_UserAndGroupsOffset = 0x90;
-				g_IntegrityLevelIndexOffset = 0xC8;
-			}
-			else
-			{
-				// Windows 8, Server 2012, and newer than them
+				// From Windows 10 1509 to Windows 11 23H2
 				g_UserAndGroupCountOffset = 0x7C;
 				g_UserAndGroupsOffset = 0x98;
 				g_IntegrityLevelIndexOffset = 0xD0;
 			}
+			else
+			{
+				// Older than Windows Vista does not have _SEP_TOKEN_PRIVILEGE
+				ntstatus = STATUS_NOT_SUPPORTED;
+				KdPrint((DRIVER_PREFIX "Unsupported OS version is detected.\n"));
+				break;
+			}
+
 		}
 
 		ntstatus = ::IoCreateDevice(
