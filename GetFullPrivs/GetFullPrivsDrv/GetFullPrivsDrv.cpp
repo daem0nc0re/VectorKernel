@@ -59,6 +59,11 @@ NTSTATUS DriverEntry(
 	NTSTATUS ntstatus = STATUS_FAILED_DRIVER_ENTRY;
 	PDEVICE_OBJECT pDeviceObject = nullptr;
 
+#ifndef _WIN64
+	KdPrint((DRIVER_PREFIX "32bit OS is not supported.\n"));
+	return STATUS_NOT_SUPPORTED;
+#endif
+
 	do
 	{
 		RTL_OSVERSIONINFOW versionInfo{ 0 };

@@ -8,15 +8,14 @@ namespace GetFullPrivsClient.Interop
     internal class NativeMethods
     {
         /*
-         * advapi32.dll
+         * kernel32.dll
          */
-        [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-        public static extern bool CreateProcessAsUser(
-            IntPtr hToken,
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        public static extern bool CreateProcess(
             string lpApplicationName,
             string lpCommandLine,
-            IntPtr /* LPSECURITY_ATTRIBUTES */ lpProcessAttributes,
-            IntPtr /* LPSECURITY_ATTRIBUTES */ lpThreadAttributes,
+            IntPtr lpProcessAttributes,
+            IntPtr lpThreadAttributes,
             bool bInheritHandles,
             PROCESS_CREATION_FLAGS dwCreationFlags,
             IntPtr lpEnvironment,
@@ -56,15 +55,5 @@ namespace GetFullPrivsClient.Interop
             uint InputBufferLength,
             IntPtr OutputBuffer,
             uint OutputBufferLength);
-
-        [DllImport("ntdll.dll")]
-        public static extern NTSTATUS NtDuplicateToken(
-            IntPtr ExistingTokenHandle,
-            ACCESS_MASK DesiredAccess,
-            in OBJECT_ATTRIBUTES ObjectAttributes,
-            BOOLEAN EffectiveOnly,
-            TOKEN_TYPE TokenType,
-            out IntPtr NewTokenHandle
-);
     }
 }

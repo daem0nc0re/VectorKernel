@@ -75,16 +75,6 @@ namespace GetFullPrivsClient.Interop
         public int dwThreadId;
     }
 
-
-    [StructLayout(LayoutKind.Sequential)]
-    internal struct SECURITY_QUALITY_OF_SERVICE
-    {
-        public int Length;
-        public SECURITY_IMPERSONATION_LEVEL ImpersonationLevel;
-        public BOOLEAN ContextTrackingMode;
-        public BOOLEAN EffectiveOnly;
-    }
-
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
     internal struct STARTUPINFO
     {

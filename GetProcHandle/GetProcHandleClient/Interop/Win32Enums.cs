@@ -163,7 +163,7 @@ namespace GetProcHandleClient.Interop
     }
 
     [Flags]
-    internal enum ProcessCreationFlags : uint
+    internal enum PROCESS_CREATION_FLAGS : uint
     {
         DEBUG_PROCESS = 0x00000001,
         DEBUG_ONLY_THIS_PROCESS = 0x00000002,

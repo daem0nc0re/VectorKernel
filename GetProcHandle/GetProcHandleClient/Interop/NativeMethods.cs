@@ -18,7 +18,7 @@ namespace GetProcHandleClient.Interop
             IntPtr lpProcessAttributes,
             IntPtr lpThreadAttributes,
             bool bInheritHandles,
-            ProcessCreationFlags dwCreationFlags,
+            PROCESS_CREATION_FLAGS dwCreationFlags,
             IntPtr lpEnvironment,
             string lpCurrentDirectory,
             in STARTUPINFOEX lpStartupInfo,

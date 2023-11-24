@@ -49,12 +49,6 @@ namespace GetFullPrivsClient.Interop
         GENERIC_READ = 0x80000000,
     }
 
-    internal enum BOOLEAN : byte
-    {
-        FALSE = 0,
-        TRUE
-    }
-
     internal enum FILE_ATTRIBUTE_FLAGS
     {
         READONLY = 0x00000001,
@@ -160,19 +154,5 @@ namespace GetFullPrivsClient.Interop
         CREATE_PRESERVE_CODE_AUTHZ_LEVEL = 0x02000000,
         CREATE_DEFAULT_ERROR_MODE = 0x04000000,
         CREATE_NO_WINDOW = 0x08000000
-    }
-
-    internal enum SECURITY_IMPERSONATION_LEVEL
-    {
-        Anonymous,
-        Identification,
-        Impersonation,
-        Delegation
-    }
-
-    internal enum TOKEN_TYPE
-    {
-        Primary = 1,
-        Impersonation
     }
 }

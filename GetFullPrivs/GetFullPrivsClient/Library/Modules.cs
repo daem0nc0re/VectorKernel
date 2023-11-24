@@ -21,7 +21,6 @@ namespace GetFullPrivsClient.Library
             do
             {
                 IntPtr hDevice;
-                IntPtr hToken;
                 var startupInfo = new STARTUPINFO
                 {
                     cb = Marshal.SizeOf(typeof(STARTUPINFO))
@@ -80,29 +79,17 @@ namespace GetFullPrivsClient.Library
 
                 Console.WriteLine("[>] Trying to create new proccess.");
 
-                hToken = Utilities.DuplicateCurrentToken(
-                    TOKEN_TYPE.Primary,
-                    SECURITY_IMPERSONATION_LEVEL.Anonymous);
-
-                if (hToken == IntPtr.Zero)
-                {
-                    Console.WriteLine("[-] Failed to duplicate current token.");
-                    break;
-                }
-
-                bSuccess = NativeMethods.CreateProcessAsUser(
-                    hToken,
+                bSuccess = NativeMethods.CreateProcess(
                     null,
                     command,
                     IntPtr.Zero,
                     IntPtr.Zero,
                     false,
-                    PROCESS_CREATION_FLAGS.CREATE_BREAKAWAY_FROM_JOB | PROCESS_CREATION_FLAGS.CREATE_NEW_CONSOLE,
+                    PROCESS_CREATION_FLAGS.CREATE_NEW_CONSOLE,
                     IntPtr.Zero,
                     Environment.CurrentDirectory,
                     in startupInfo,
                     out PROCESS_INFORMATION processInfo);
-                NativeMethods.NtClose(hToken);
 
                 if (!bSuccess)
                 {

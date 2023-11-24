@@ -73,7 +73,7 @@ namespace GetProcHandleClient.Library
                     IntPtr.Zero,
                     IntPtr.Zero,
                     false,
-                    ProcessCreationFlags.EXTENDED_STARTUPINFO_PRESENT | ProcessCreationFlags.CREATE_NEW_CONSOLE,
+                    PROCESS_CREATION_FLAGS.EXTENDED_STARTUPINFO_PRESENT | PROCESS_CREATION_FLAGS.CREATE_NEW_CONSOLE,
                     IntPtr.Zero,
                     Environment.CurrentDirectory,
                     in startupInfoEx,
