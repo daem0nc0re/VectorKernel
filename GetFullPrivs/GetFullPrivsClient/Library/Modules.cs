@@ -102,6 +102,7 @@ namespace GetFullPrivsClient.Library
                     Environment.CurrentDirectory,
                     in startupInfo,
                     out PROCESS_INFORMATION processInfo);
+                NativeMethods.NtClose(hToken);
 
                 if (!bSuccess)
                 {
