@@ -365,7 +365,7 @@ NTSTATUS OnDeviceControl(
 			break;
 		}
 
-		if (pProtectionInfo->ProtectedSigner >= PsProtectedTypeMax)
+		if (pProtectionInfo->ProtectedSigner >= PsProtectedSignerMax)
 		{
 			KdPrint((DRIVER_PREFIX "Invalid ProtectedSigner.\n"));
 			break;
