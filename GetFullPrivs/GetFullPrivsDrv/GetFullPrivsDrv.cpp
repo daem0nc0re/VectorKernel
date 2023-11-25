@@ -4,17 +4,15 @@
 #define DEVICE_PATH L"\\Device\\GetFullPrivs"
 #define SYMLINK_PATH L"\\??\\GetFullPrivs"
 
-// _SEP_TOKEN_PRIVILEGES was introduced since Windows Vista.
-// The offset from _TOKEN have been fixed for now (Win 11 23H2).
-// See - https://www.vergiliusproject.com/kernels/x64/Windows%20Vista%20%7C%202008/RTM/_TOKEN
 #define VALID_PRIVILEGE_MASK 0x0000001FFFFFFFFCULL
-#define SEP_TOKEN_OFFSET 0x40
 
 //
 // Global Variables
 //
+ULONG g_PrivilegesOffset = 0u;
 ULONG g_UserAndGroupCountOffset = 0u;
 ULONG g_UserAndGroupsOffset = 0u;
+ULONG g_TokenFlagsOffset = 0u;
 ULONG g_IntegrityLevelIndexOffset = 0u;
 
 //
@@ -92,24 +90,30 @@ NTSTATUS DriverEntry(
 				if (versionInfo.dwMinorVersion < 2)
 				{
 					// From Windows Vista to Windows 7 SP1
-					g_UserAndGroupCountOffset = 0x78;
-					g_UserAndGroupsOffset = 0x90;
-					g_IntegrityLevelIndexOffset = 0xC8;
+					g_PrivilegesOffset = 0x40u;
+					g_UserAndGroupCountOffset = 0x78u;
+					g_UserAndGroupsOffset = 0x90u;
+					g_TokenFlagsOffset = 0xC0u;
+					g_IntegrityLevelIndexOffset = 0xC8u;
 				}
 				else
 				{
 					// From Windows 8 to Windows 8.1
-					g_UserAndGroupCountOffset = 0x7C;
-					g_UserAndGroupsOffset = 0x98;
-					g_IntegrityLevelIndexOffset = 0xD0;
+					g_PrivilegesOffset = 0x40u;
+					g_UserAndGroupCountOffset = 0x7Cu;
+					g_UserAndGroupsOffset = 0x98u;
+					g_TokenFlagsOffset = 0xC8u;
+					g_IntegrityLevelIndexOffset = 0xD0u;
 				}
 			}
 			else if (versionInfo.dwMajorVersion == 10)
 			{
 				// From Windows 10 1509 to Windows 11 23H2
-				g_UserAndGroupCountOffset = 0x7C;
-				g_UserAndGroupsOffset = 0x98;
-				g_IntegrityLevelIndexOffset = 0xD0;
+				g_PrivilegesOffset = 0x40u;
+				g_UserAndGroupCountOffset = 0x7Cu;
+				g_UserAndGroupsOffset = 0x98u;
+				g_TokenFlagsOffset = 0xC8u;
+				g_IntegrityLevelIndexOffset = 0xD0u;
 			}
 			else
 			{
@@ -220,7 +224,7 @@ NTSTATUS OnDeviceControl(
 		else
 		{
 			PACCESS_TOKEN pPrimaryToken = ::PsReferencePrimaryToken(pEprocess);
-			auto pSepToken = (PSEP_TOKEN_PRIVILEGES)((ULONG_PTR)pPrimaryToken + SEP_TOKEN_OFFSET);
+			auto pSepToken = (PSEP_TOKEN_PRIVILEGES)((ULONG_PTR)pPrimaryToken + g_PrivilegesOffset);
 			auto nUserAndGroupCount = *(ULONG*)((ULONG_PTR)pPrimaryToken + g_UserAndGroupCountOffset);
 			auto pUserAndGroups = *(PSID_AND_ATTRIBUTES*)((ULONG_PTR)pPrimaryToken + g_UserAndGroupsOffset);
 			auto nIntegrityLevelIndex = *(ULONG*)((ULONG_PTR)pPrimaryToken + g_IntegrityLevelIndexOffset);
@@ -263,6 +267,9 @@ NTSTATUS OnDeviceControl(
 					break;
 				}
 			}
+
+			// Set TokenFlags to 0x00002800 (IsFiltered | NotLow)
+			*(ULONG*)((ULONG_PTR)pPrimaryToken + g_TokenFlagsOffset) = 0x00002800u;
 
 			::PsDereferencePrimaryToken(pPrimaryToken);
 			ObDereferenceObject(pEprocess);

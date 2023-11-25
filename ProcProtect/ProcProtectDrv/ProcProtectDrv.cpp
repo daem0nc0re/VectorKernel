@@ -250,6 +250,13 @@ NTSTATUS DriverEntry(
 					g_SectionSignatureLevelOffset = 0x879u;
 					g_ProtectionOffset = 0x87Au;
 				}
+				else if (versionInfo.dwBuildNumber == 22631)
+				{
+					// For Windows 11 23H2
+					g_SignatureLevelOffset = 0x878u;
+					g_SectionSignatureLevelOffset = 0x879u;
+					g_ProtectionOffset = 0x87Au;
+				}
 				else
 				{
 					ntstatus = STATUS_NOT_SUPPORTED;
