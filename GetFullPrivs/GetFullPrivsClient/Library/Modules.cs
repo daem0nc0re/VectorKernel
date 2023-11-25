@@ -16,7 +16,7 @@ namespace GetFullPrivsClient.Library
             IntPtr pInBuffer = Marshal.AllocHGlobal(4);
             Marshal.WriteInt32(pInBuffer, Process.GetCurrentProcess().Id);
 
-            Console.WriteLine("[>] Sending a query to GetFullPrivs driver.");
+            Console.WriteLine("[>] Sending a query to {0}.", Globals.SYMLINK_PATH);
 
             do
             {

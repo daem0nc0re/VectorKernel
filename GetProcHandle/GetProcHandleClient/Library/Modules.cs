@@ -34,7 +34,7 @@ namespace GetProcHandleClient.Library
                 return false;
             }
 
-            Console.WriteLine("[>] Sending a query to GetProcHandle driver.");
+            Console.WriteLine("[>] Sending a query to {0}.", Globals.SYMLINK_PATH);
 
             do
             {

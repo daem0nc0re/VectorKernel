@@ -94,8 +94,8 @@ namespace ProcProtectClient.Library
                     Console.WriteLine("[+] Got protection information of PID {0}.", info.ProcessId);
                     Console.WriteLine("    [*] Protected Type          : {0}", info.ProtectedType.ToString());
                     Console.WriteLine("    [*] Protected Signer        : {0}", info.ProtectedSigner.ToString());
-                    Console.WriteLine("    [*] Signature Level         : 0x{0}", info.SignatureLevel.ToString("X2"));
-                    Console.WriteLine("    [*] Section Signature Level : 0x{0}", info.SectionSignatureLevel.ToString("X2"));
+                    Console.WriteLine("    [*] Signature Level         : {0}", info.SignatureLevel);
+                    Console.WriteLine("    [*] Section Signature Level : {0}", info.SectionSignatureLevel);
                 }
             } while (false);
 
@@ -242,8 +242,8 @@ namespace ProcProtectClient.Library
                     Console.WriteLine("[+] Protection of PID {0} is updated.", info.ProcessId);
                     Console.WriteLine("    [*] Protected Type          : {0}", info.ProtectedType.ToString());
                     Console.WriteLine("    [*] Protected Signer        : {0}", info.ProtectedSigner.ToString());
-                    Console.WriteLine("    [*] Signature Level         : 0x{0}", info.SignatureLevel.ToString("X2"));
-                    Console.WriteLine("    [*] Section Signature Level : 0x{0}", info.SectionSignatureLevel.ToString("X2"));
+                    Console.WriteLine("    [*] Signature Level         : {0}", info.SignatureLevel);
+                    Console.WriteLine("    [*] Section Signature Level : {0}", info.SectionSignatureLevel);
                 }
             } while (false);
 
