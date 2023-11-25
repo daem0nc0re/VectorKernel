@@ -5,26 +5,48 @@ VisualStudioVersion = 17.8.34316.72
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "StealTokenDrv", "StealTokenDrv\StealTokenDrv.vcxproj", "{51E46096-4A36-4C7D-9773-BC28DBDC4FC6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StealTokenClient", "StealTokenClient\StealTokenClient.csproj", "{C7F1F871-8045-4414-9DC3-20F8AA42B4A1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
 		Debug|ARM64 = Debug|ARM64
 		Debug|x64 = Debug|x64
+		Release|Any CPU = Release|Any CPU
 		Release|ARM64 = Release|ARM64
 		Release|x64 = Release|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{51E46096-4A36-4C7D-9773-BC28DBDC4FC6}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{51E46096-4A36-4C7D-9773-BC28DBDC4FC6}.Debug|Any CPU.Build.0 = Debug|x64
+		{51E46096-4A36-4C7D-9773-BC28DBDC4FC6}.Debug|Any CPU.Deploy.0 = Debug|x64
 		{51E46096-4A36-4C7D-9773-BC28DBDC4FC6}.Debug|ARM64.ActiveCfg = Debug|ARM64
 		{51E46096-4A36-4C7D-9773-BC28DBDC4FC6}.Debug|ARM64.Build.0 = Debug|ARM64
 		{51E46096-4A36-4C7D-9773-BC28DBDC4FC6}.Debug|ARM64.Deploy.0 = Debug|ARM64
 		{51E46096-4A36-4C7D-9773-BC28DBDC4FC6}.Debug|x64.ActiveCfg = Debug|x64
 		{51E46096-4A36-4C7D-9773-BC28DBDC4FC6}.Debug|x64.Build.0 = Debug|x64
 		{51E46096-4A36-4C7D-9773-BC28DBDC4FC6}.Debug|x64.Deploy.0 = Debug|x64
+		{51E46096-4A36-4C7D-9773-BC28DBDC4FC6}.Release|Any CPU.ActiveCfg = Release|x64
+		{51E46096-4A36-4C7D-9773-BC28DBDC4FC6}.Release|Any CPU.Build.0 = Release|x64
+		{51E46096-4A36-4C7D-9773-BC28DBDC4FC6}.Release|Any CPU.Deploy.0 = Release|x64
 		{51E46096-4A36-4C7D-9773-BC28DBDC4FC6}.Release|ARM64.ActiveCfg = Release|ARM64
 		{51E46096-4A36-4C7D-9773-BC28DBDC4FC6}.Release|ARM64.Build.0 = Release|ARM64
 		{51E46096-4A36-4C7D-9773-BC28DBDC4FC6}.Release|ARM64.Deploy.0 = Release|ARM64
 		{51E46096-4A36-4C7D-9773-BC28DBDC4FC6}.Release|x64.ActiveCfg = Release|x64
 		{51E46096-4A36-4C7D-9773-BC28DBDC4FC6}.Release|x64.Build.0 = Release|x64
 		{51E46096-4A36-4C7D-9773-BC28DBDC4FC6}.Release|x64.Deploy.0 = Release|x64
+		{C7F1F871-8045-4414-9DC3-20F8AA42B4A1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C7F1F871-8045-4414-9DC3-20F8AA42B4A1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C7F1F871-8045-4414-9DC3-20F8AA42B4A1}.Debug|ARM64.ActiveCfg = Debug|Any CPU
+		{C7F1F871-8045-4414-9DC3-20F8AA42B4A1}.Debug|ARM64.Build.0 = Debug|Any CPU
+		{C7F1F871-8045-4414-9DC3-20F8AA42B4A1}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{C7F1F871-8045-4414-9DC3-20F8AA42B4A1}.Debug|x64.Build.0 = Debug|Any CPU
+		{C7F1F871-8045-4414-9DC3-20F8AA42B4A1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C7F1F871-8045-4414-9DC3-20F8AA42B4A1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C7F1F871-8045-4414-9DC3-20F8AA42B4A1}.Release|ARM64.ActiveCfg = Release|Any CPU
+		{C7F1F871-8045-4414-9DC3-20F8AA42B4A1}.Release|ARM64.Build.0 = Release|Any CPU
+		{C7F1F871-8045-4414-9DC3-20F8AA42B4A1}.Release|x64.ActiveCfg = Release|Any CPU
+		{C7F1F871-8045-4414-9DC3-20F8AA42B4A1}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
