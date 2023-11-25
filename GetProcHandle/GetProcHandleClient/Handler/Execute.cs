@@ -13,7 +13,7 @@ namespace GetProcHandleClient.Handler
                 return;
             }
 
-            if (string.IsNullOrEmpty("pid"))
+            if (string.IsNullOrEmpty(options.GetValue("pid")))
             {
                 Console.WriteLine("\n[-] PID is not specified.\n");
                 return;
