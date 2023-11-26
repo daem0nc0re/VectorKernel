@@ -122,7 +122,7 @@ NTSTATUS DriverEntry(
 	if (!NT_SUCCESS(ntstatus) && (pDeviceObject != nullptr))
 		::IoDeleteDevice(pDeviceObject);
 
-	return false;
+	return ntstatus;
 }
 
 
