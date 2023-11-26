@@ -77,7 +77,7 @@ namespace GetFullPrivsClient.Library
                     Console.WriteLine("[+] Got full privileges.");
                 }
 
-                Console.WriteLine("[>] Trying to create new proccess.");
+                Console.WriteLine("[>] Trying to create new process.");
 
                 bSuccess = NativeMethods.CreateProcess(
                     null,

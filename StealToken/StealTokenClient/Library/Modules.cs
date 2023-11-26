@@ -94,7 +94,7 @@ namespace StealTokenClient.Library
                     Console.WriteLine("[+] Token stealing from the target process is successful.");
                 }
 
-                Console.WriteLine("[>] Trying to create new proccess.");
+                Console.WriteLine("[>] Trying to create new process.");
 
                 bSuccess = NativeMethods.CreateProcess(
                     null,
