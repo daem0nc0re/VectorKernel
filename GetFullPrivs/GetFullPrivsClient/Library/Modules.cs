@@ -93,7 +93,7 @@ namespace GetFullPrivsClient.Library
 
                 if (!bSuccess)
                 {
-                    Console.WriteLine("[-] Failed to CreateProcessAsUser() (Error = 0x{0})", Marshal.GetLastWin32Error().ToString("X8"));
+                    Console.WriteLine("[-] Failed to CreateProcess() (Error = 0x{0})", Marshal.GetLastWin32Error().ToString("X8"));
                 }
                 else
                 {
