@@ -12,15 +12,6 @@
 #define IOCTL_QUERY_MODULE_INFO CTL_CODE(0x8000, 0x0500, METHOD_BUFFERED, FILE_ANY_ACCESS)
 
 //
-// Custom struct definition
-//
-typedef struct _SYSTEM_MODULE_INFO
-{
-	ULONG ReturnedLength;
-	AUX_MODULE_EXTENDED_INFO Information[ANYSIZE_ARRAY];
-} SYSTEM_MODULE_INFO, * PSYSTEM_MODULE_INFO;
-
-//
 // Prototypes
 //
 void DriverUnload(_In_ PDRIVER_OBJECT DriverObject);
@@ -32,6 +23,7 @@ NTSTATUS OnDeviceControl(
 	_Inout_ PDEVICE_OBJECT DeviceObject,
 	_Inout_ PIRP Irp
 );
+NTSTATUS GetModuleInformation(_In_ PVOID* OutBuffer, _Inout_ ULONG* BufferSize);
 
 
 //
@@ -78,7 +70,7 @@ NTSTATUS DriverEntry(
 			// ExAllocatePool2 API was introduced from Windows 10 2004.
 			// If youw want to try this module older OS, change ExAllocatePool2 API
 			// call to ExAllocatePoolWithTag API, and comment out this verification.
-			bool bSupported = (versionInfo.dwMajorVersion == 10) && (versionInfo.dwMinorVersion >= 19041);
+			bool bSupported = (versionInfo.dwMajorVersion == 10) && (versionInfo.dwBuildNumber >= 19041);
 
 			if (!bSupported)
 			{
@@ -122,7 +114,7 @@ NTSTATUS DriverEntry(
 	if (!NT_SUCCESS(ntstatus) && (pDeviceObject != nullptr))
 		::IoDeleteDevice(pDeviceObject);
 
-	return false;
+	return ntstatus;
 }
 
 
@@ -159,36 +151,65 @@ NTSTATUS OnDeviceControl(
 	UNREFERENCED_PARAMETER(DeviceObject);
 
 	NTSTATUS ntstatus = STATUS_INVALID_DEVICE_REQUEST;
-	ULONG_PTR info = NULL;
 	PIO_STACK_LOCATION irpSp = ::IoGetCurrentIrpStackLocation(Irp);
 	auto& dic = irpSp->Parameters.DeviceIoControl;
 	PVOID pInfoBuffer = nullptr;
+	ULONG nBufferSize = 0u;
+	ULONG_PTR info = NULL;
 
 	switch (dic.IoControlCode)
 	{
 	case IOCTL_QUERY_MODULE_INFO:
-		ULONG nBufferSize = 0u;
-		auto nEntryOffset = (ULONG)FIELD_OFFSET(SYSTEM_MODULE_INFO, Information);
-
-		// Output buffer must have enough space to get notification about required size
-		if (dic.OutputBufferLength < sizeof(ULONG))
+		if (dic.OutputBufferLength < sizeof(AUX_MODULE_EXTENDED_INFO))
 		{
 			ntstatus = STATUS_BUFFER_TOO_SMALL;
-			KdPrint((DRIVER_PREFIX "Output buffer is too small.\n"));
 			break;
 		}
-		else if (dic.OutputBufferLength > nEntryOffset)
+
+		nBufferSize = dic.OutputBufferLength;
+		ntstatus = GetModuleInformation(&pInfoBuffer, &nBufferSize);
+
+		if (!NT_SUCCESS(ntstatus))
+			break;
+
+		if ((dic.OutputBufferLength >= nBufferSize) && (pInfoBuffer != nullptr))
 		{
-			nBufferSize = dic.OutputBufferLength - nEntryOffset;
-			pInfoBuffer = ::ExAllocatePool2(POOL_FLAG_PAGED, nBufferSize, (ULONG)DRIVER_TAG);
+			ULONG nNumberOfEntries = nBufferSize / sizeof(AUX_MODULE_EXTENDED_INFO);
+			
+			::memcpy(Irp->AssociatedIrp.SystemBuffer, pInfoBuffer, nBufferSize);
+			info = nBufferSize;
 
-			if (pInfoBuffer == nullptr)
-			{
-				ntstatus = STATUS_INSUFFICIENT_RESOURCES;
-				break;
-			}
+			KdPrint((DRIVER_PREFIX "Got information for %u modules.\n", nNumberOfEntries));
 		}
+		else
+		{
+			ntstatus = STATUS_BUFFER_TOO_SMALL;
+			KdPrint((DRIVER_PREFIX "Required %u bytes for output buffer.\n", nBufferSize));
+		}
+	}
 
+	if (pInfoBuffer != nullptr)
+		::ExFreePoolWithTag(pInfoBuffer, (ULONG)DRIVER_TAG);
+
+	Irp->IoStatus.Status = ntstatus;
+	Irp->IoStatus.Information = info;
+	IoCompleteRequest(Irp, 0);
+
+	return ntstatus;
+}
+
+
+//
+// Helper functions
+//
+NTSTATUS GetModuleInformation(_In_ PVOID *OutBuffer, _Inout_ ULONG *BufferSize)
+{
+	NTSTATUS ntstatus = STATUS_SUCCESS;
+	PVOID pInfoBuffer = nullptr;
+	ULONG nRequiredSize = 0u;
+
+	do
+	{
 		ntstatus = ::AuxKlibInitialize();
 
 		if (!NT_SUCCESS(ntstatus))
@@ -198,45 +219,40 @@ NTSTATUS OnDeviceControl(
 		}
 
 		ntstatus = ::AuxKlibQueryModuleInformation(
-			&nBufferSize,
+			&nRequiredSize,
+			sizeof(AUX_MODULE_EXTENDED_INFO),
+			nullptr);
+
+		if (!NT_SUCCESS(ntstatus))
+		{
+			KdPrint((DRIVER_PREFIX "Failed to first AuxKlibQueryModuleInformation() (NTSTATUS = 0x%08X).\n", ntstatus));
+			break;
+		}
+
+		pInfoBuffer = ::ExAllocatePool2(POOL_FLAG_NON_PAGED, nRequiredSize, (ULONG)DRIVER_TAG);
+
+		if (pInfoBuffer == nullptr)
+		{
+			ntstatus = STATUS_INSUFFICIENT_RESOURCES;
+			KdPrint((DRIVER_PREFIX "Failed to allocate paged pool.\n"));
+			break;
+		}
+
+		ntstatus = ::AuxKlibQueryModuleInformation(
+			&nRequiredSize,
 			sizeof(AUX_MODULE_EXTENDED_INFO),
 			pInfoBuffer);
 
 		if (!NT_SUCCESS(ntstatus))
 		{
-			nBufferSize += nEntryOffset;
-			*(ULONG*)Irp->AssociatedIrp.SystemBuffer = nBufferSize;
-
-			KdPrint((DRIVER_PREFIX "Failed to AuxKlibQueryModuleInformation() (NTSTATUS = 0x%08X).\n", ntstatus));
+			::ExFreePoolWithTag(pInfoBuffer, (ULONG)DRIVER_TAG);
+			pInfoBuffer = nullptr;
+			KdPrint((DRIVER_PREFIX "Failed to second AuxKlibQueryModuleInformation() (NTSTATUS = 0x%08X).\n", ntstatus));
 		}
-		else
-		{
-			if (pInfoBuffer == nullptr)
-			{
-				// This block should not be reached.
-				KdPrint((DRIVER_PREFIX "Got STATUS_SUCCESS but buffer pointer is null. Something wrong.\n"));
-				break;
-			}
+	} while (false);
 
-			::memset(Irp->AssociatedIrp.SystemBuffer, 0, nEntryOffset);
-			::memcpy(
-				(PVOID)((ULONG_PTR)Irp->AssociatedIrp.SystemBuffer + nEntryOffset),
-				pInfoBuffer,
-				nBufferSize);
-			nBufferSize += nEntryOffset;
-			*(ULONG*)Irp->AssociatedIrp.SystemBuffer = nBufferSize;
-			info = nBufferSize;
-
-			KdPrint((DRIVER_PREFIX "Got module information.\n"));
-		}
-	}
-
-	if (pInfoBuffer != nullptr)
-		::ExFreePool(pInfoBuffer);
-
-	Irp->IoStatus.Status = ntstatus;
-	Irp->IoStatus.Information = info;
-	IoCompleteRequest(Irp, 0);
+	*OutBuffer = pInfoBuffer;
+	*BufferSize = nRequiredSize;
 
 	return ntstatus;
 }
