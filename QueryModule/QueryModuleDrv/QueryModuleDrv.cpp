@@ -23,7 +23,7 @@ NTSTATUS OnDeviceControl(
 	_Inout_ PDEVICE_OBJECT DeviceObject,
 	_Inout_ PIRP Irp
 );
-NTSTATUS GetModuleInformation(_In_ PVOID* OutBuffer, _Inout_ ULONG* BufferSize);
+NTSTATUS GetModuleInformation(_Inout_ PVOID* OutBuffer, _Inout_ ULONG* BufferSize);
 
 
 //
@@ -202,7 +202,7 @@ NTSTATUS OnDeviceControl(
 //
 // Helper functions
 //
-NTSTATUS GetModuleInformation(_In_ PVOID *OutBuffer, _Inout_ ULONG *BufferSize)
+NTSTATUS GetModuleInformation(_Inout_ PVOID *OutBuffer, _Inout_ ULONG *BufferSize)
 {
 	NTSTATUS ntstatus = STATUS_SUCCESS;
 	PVOID pInfoBuffer = nullptr;
