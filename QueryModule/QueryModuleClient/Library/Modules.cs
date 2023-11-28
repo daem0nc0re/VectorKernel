@@ -13,15 +13,14 @@ namespace QueryModuleClient.Library
         {
             NTSTATUS ntstatus;
             IntPtr hDevice;
-            int nOutLength = 0x4000;
             var pOutBuffer = IntPtr.Zero;
-            var bSuccess = false;
 
             Console.WriteLine("[>] Sending queries to {0}.", Globals.SYMLINK_PATH);
 
             do
             {
                 IO_STATUS_BLOCK ioStatusBlock;
+                int nOutLength = 0x4000;
 
                 using (var objectAttributes = new OBJECT_ATTRIBUTES(
                     Globals.SYMLINK_PATH,
@@ -88,7 +87,7 @@ namespace QueryModuleClient.Library
 
                     if (nEntries > 0)
                     {
-                        Console.WriteLine("[+] Got {0} modules.", nEntries);
+                        resultBuilder.AppendFormat("[+] Got {0} modules.\n", nEntries);
 
                         if (Environment.Is64BitProcess)
                         {
@@ -105,7 +104,7 @@ namespace QueryModuleClient.Library
                     }
                     else
                     {
-                        resultBuilder.Append("[*] No modules.\n");
+                        resultBuilder.Append("[*] No modules.");
                     }
 
                     for (var idx = 0u; idx < nEntries; idx++)
@@ -135,9 +134,6 @@ namespace QueryModuleClient.Library
                         }
                     }
 
-                    if (nEntries > 0)
-                        resultBuilder.Append("\n");
-
                     Console.WriteLine(resultBuilder.ToString());
                 }
             } while (false);
@@ -150,7 +146,7 @@ namespace QueryModuleClient.Library
 
             Console.WriteLine("[*] Done.");
 
-            return bSuccess;
+            return (ntstatus == Win32Consts.STATUS_SUCCESS);
         }
     }
 }
