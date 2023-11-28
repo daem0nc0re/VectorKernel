@@ -229,6 +229,10 @@ NTSTATUS GetModuleInformation(_Inout_ PVOID *OutBuffer, _Inout_ ULONG *BufferSiz
 			break;
 		}
 
+		// If you want to test this module in older OS, change this 
+		// ExAllocatePool2 API call as following:
+		//
+		// pInfouffer = ::ExAllocatePoolWithTag(PagedPool, nRequiredSize, (ULONG)DRIVER_TAG);
 		pInfoBuffer = ::ExAllocatePool2(POOL_FLAG_NON_PAGED, nRequiredSize, (ULONG)DRIVER_TAG);
 
 		if (pInfoBuffer == nullptr)
