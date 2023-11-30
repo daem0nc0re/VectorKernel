@@ -6,6 +6,8 @@
 #define SYMLINK_PATH L"\\??\\QueryModule"
 #define DRIVER_TAG 'lnKV'
 
+#pragma warning(disable: 4996) // This warning is caused when use old ExAllocatePoolWithTag() API.
+
 //
 // Ioctl code definition
 //
@@ -29,6 +31,12 @@ NTSTATUS GetModuleInformation(_Inout_ PVOID* OutBuffer, _Inout_ ULONG* BufferSiz
 //
 // Driver routines
 //
+
+// This module use ExAllocatePool2 API for memory allocation.
+// ExAllocatePool2 API was introduced from Windows 10 2004, so If you
+// try to load this module in older OSes, it will be failed.
+// If youw want to try this module older OS, change ExAllocatePool2 API
+// call to ExAllocatePoolWithTag API, and comment out this verification.
 extern "C"
 NTSTATUS DriverEntry(
 	_In_ PDRIVER_OBJECT  DriverObject,
@@ -46,38 +54,10 @@ NTSTATUS DriverEntry(
 
 	do
 	{
-		RTL_OSVERSIONINFOW versionInfo{ 0 };
 		UNICODE_STRING devicePath{ 0 };
 		UNICODE_STRING symlinkPath{ 0 };
 		::RtlInitUnicodeString(&devicePath, DEVICE_PATH);
 		::RtlInitUnicodeString(&symlinkPath, SYMLINK_PATH);
-
-		ntstatus = ::RtlGetVersion(&versionInfo);
-
-		if (!NT_SUCCESS(ntstatus))
-		{
-			KdPrint((DRIVER_PREFIX "Failed to get OS version information (NTSTATUS = 0x%08X).\n", ntstatus));
-			break;
-		}
-		else
-		{
-			KdPrint((DRIVER_PREFIX "OS Version - %u.%u.%u\n",
-				versionInfo.dwMajorVersion,
-				versionInfo.dwMinorVersion,
-				versionInfo.dwBuildNumber));
-
-			// This module use ExAllocatePool2 API for memory allocation.
-			// ExAllocatePool2 API was introduced from Windows 10 2004.
-			// If youw want to try this module older OS, change ExAllocatePool2 API
-			// call to ExAllocatePoolWithTag API, and comment out this verification.
-			bool bSupported = (versionInfo.dwMajorVersion == 10) && (versionInfo.dwBuildNumber >= 19041);
-
-			if (!bSupported)
-			{
-				ntstatus = STATUS_NOT_SUPPORTED;
-				break;
-			}
-		}
 
 		ntstatus = ::IoCreateDevice(
 			DriverObject,
@@ -229,8 +209,8 @@ NTSTATUS GetModuleInformation(_Inout_ PVOID *OutBuffer, _Inout_ ULONG *BufferSiz
 			break;
 		}
 
-		// If you want to test this module in older OS, change this 
-		// ExAllocatePool2 API call as following:
+		// If you want to test this module in older OS, change this ExAllocatePool2 API 
+		// call as following:
 		//
 		// pInfouffer = ::ExAllocatePoolWithTag(PagedPool, nRequiredSize, (ULONG)DRIVER_TAG);
 		pInfoBuffer = ::ExAllocatePool2(POOL_FLAG_NON_PAGED, nRequiredSize, (ULONG)DRIVER_TAG);
