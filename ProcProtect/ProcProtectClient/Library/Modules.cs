@@ -12,26 +12,8 @@ namespace ProcProtectClient.Library
         public static bool GetProtectionInformation(int pid)
         {
             NTSTATUS ntstatus;
-            string processName;
-            IntPtr pInBuffer;
-            IntPtr pOutBuffer;
-
-            try
-            {
-                processName = Process.GetProcessById(pid).ProcessName;
-
-                Console.WriteLine("[*] Target process information.");
-                Console.WriteLine("    [*] Process ID   : {0}", pid);
-                Console.WriteLine("    [*] Process Name : {0}", processName);
-            }
-            catch
-            {
-                Console.WriteLine("[-] Failed to find the specified process.");
-                return false;
-            }
-
-            pInBuffer = Marshal.AllocHGlobal(4);
-            pOutBuffer = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(PROTECTION_INFO)));
+            IntPtr pInBuffer = Marshal.AllocHGlobal(4);
+            IntPtr pOutBuffer = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(PROTECTION_INFO)));
             Marshal.WriteInt32(pInBuffer, pid);
 
             Console.WriteLine("[>] Sending a query to {0}.", Globals.SYMLINK_PATH);
@@ -116,7 +98,6 @@ namespace ProcProtectClient.Library
             uint sectionSignatureLevel)
         {
             NTSTATUS ntstatus;
-            string processName;
             IntPtr pInBuffer;
             var info = new PROTECTION_INFO { ProcessId = (uint)pid };
             var bIsValid = false;
@@ -168,20 +149,6 @@ namespace ProcProtectClient.Library
 
             if (!bIsValid)
                 return false;
-
-            try
-            {
-                processName = Process.GetProcessById(pid).ProcessName;
-
-                Console.WriteLine("[*] Target process information.");
-                Console.WriteLine("    [*] Process ID   : {0}", pid);
-                Console.WriteLine("    [*] Process Name : {0}", processName);
-            }
-            catch
-            {
-                Console.WriteLine("[-] Failed to find the specified process.");
-                return false;
-            }
 
             pInBuffer = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(PROTECTION_INFO)));
             Marshal.StructureToPtr(info, pInBuffer, false);
