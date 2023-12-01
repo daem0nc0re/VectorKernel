@@ -17,7 +17,7 @@ namespace InjectLibraryClient
                 options.AddParameter(true, "l", "library", null, "Specifies a DLL file to inject.");
                 options.AddParameter(false, "c", "command", null, "Specifies a command to create injection testing process.");
                 options.AddParameter(false, "t", "tid", null, "Specifies a target thread ID in decimal format.");
-                options.AddExclusive(new List<string> { "get", "update" });
+                options.AddExclusive(new List<string> { "command", "tid" });
                 options.Parse(args);
 
                 Execute.Run(options);

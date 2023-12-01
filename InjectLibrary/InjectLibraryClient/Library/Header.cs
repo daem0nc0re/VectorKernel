@@ -19,7 +19,7 @@ namespace InjectLibraryClient.Library
             if (!string.IsNullOrEmpty(libraryPath))
             {
                 var pathBytes = Encoding.Unicode.GetBytes(libraryPath);
-                var nCopyLength = (libraryPath.Length * 2 < 512) ? (libraryPath.Length * 2) : 512;
+                var nCopyLength = (pathBytes.Length < 512) ? pathBytes.Length : 512;
                 Buffer.BlockCopy(pathBytes, 0, LibraryPath, 0, nCopyLength);
             }
         }

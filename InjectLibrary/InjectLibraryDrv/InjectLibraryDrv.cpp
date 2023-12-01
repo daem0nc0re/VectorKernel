@@ -169,75 +169,73 @@ NTSTATUS DriverEntry(
 
 	do
 	{
-		UNICODE_STRING devicePath{ 0 };
-		UNICODE_STRING symlinkPath{ 0 };
-		UNICODE_STRING apiName = { 0 };
-		::RtlInitUnicodeString(&devicePath, DEVICE_PATH);
-		::RtlInitUnicodeString(&symlinkPath, SYMLINK_PATH);
+		UNICODE_STRING devicePath = RTL_CONSTANT_STRING(DEVICE_PATH);
+		UNICODE_STRING symlinkPath = RTL_CONSTANT_STRING(SYMLINK_PATH);
+		UNICODE_STRING routineName{ 0 };
 
-		::RtlInitUnicodeString(&apiName, L"PsGetProcessPeb");
-		PsGetProcessPeb = (PPsGetProcessPeb)::MmGetSystemRoutineAddress(&apiName);
+		::RtlInitUnicodeString(&routineName, L"PsGetProcessPeb");
+		PsGetProcessPeb = (PPsGetProcessPeb)::MmGetSystemRoutineAddress(&routineName);
 
 		if (PsGetProcessPeb == nullptr)
 		{
-			KdPrint((DRIVER_PREFIX "Failed to resolve %wZ() API.\n", apiName));
+			KdPrint((DRIVER_PREFIX "Failed to resolve %wZ() API.\n", routineName));
 			break;
 		}
 		else
 		{
-			KdPrint((DRIVER_PREFIX "%wZ() API is at 0x%p.\n", apiName, (PVOID)PsGetProcessPeb));
+			KdPrint((DRIVER_PREFIX "%wZ() API is at 0x%p.\n", routineName, (PVOID)PsGetProcessPeb));
 		}
 
-		::RtlInitUnicodeString(&apiName, L"RtlFindExportedRoutineByName");
-		RtlFindExportedRoutineByName = (PRtlFindExportedRoutineByName)::MmGetSystemRoutineAddress(&apiName);
+		::RtlInitUnicodeString(&routineName, L"RtlFindExportedRoutineByName");
+		RtlFindExportedRoutineByName = (PRtlFindExportedRoutineByName)::MmGetSystemRoutineAddress(&routineName);
 
 		if (PsGetProcessPeb == nullptr)
 		{
-			KdPrint((DRIVER_PREFIX "Failed to resolve %wZ() API.\n", apiName));
+			KdPrint((DRIVER_PREFIX "Failed to resolve %wZ() API.\n", routineName));
 			break;
 		}
 		else
 		{
-			KdPrint((DRIVER_PREFIX "%wZ() API is at 0x%p.\n", apiName, (PVOID)RtlFindExportedRoutineByName));
+			KdPrint((DRIVER_PREFIX "%wZ() API is at 0x%p.\n", routineName, (PVOID)RtlFindExportedRoutineByName));
 		}
 
-		::RtlInitUnicodeString(&apiName, L"KeAlertThread");
-		KeAlertThread = (PKeAlertThread)::MmGetSystemRoutineAddress(&apiName);
+		::RtlInitUnicodeString(&routineName, L"KeAlertThread");
+		KeAlertThread = (PKeAlertThread)::MmGetSystemRoutineAddress(&routineName);
 
 		if (PsGetProcessPeb == nullptr)
 		{
-			KdPrint((DRIVER_PREFIX "Failed to resolve %wZ() API.\n", apiName));
+			KdPrint((DRIVER_PREFIX "Failed to resolve %wZ() API.\n", routineName));
 			break;
 		}
 		else
 		{
-			KdPrint((DRIVER_PREFIX "%wZ() API is at 0x%p.\n", apiName, (PVOID)RtlFindExportedRoutineByName));
+			KdPrint((DRIVER_PREFIX "%wZ() API is at 0x%p.\n", routineName, (PVOID)RtlFindExportedRoutineByName));
 		}
 
-		::RtlInitUnicodeString(&apiName, L"KeInitializeApc");
-		KeInitializeApc = (PKeInitializeApc)::MmGetSystemRoutineAddress(&apiName);
+		::RtlInitUnicodeString(&routineName, L"KeInitializeApc");
+		KeInitializeApc = (PKeInitializeApc)::MmGetSystemRoutineAddress(&routineName);
 
 		if (PsGetProcessPeb == nullptr)
 		{
-			KdPrint((DRIVER_PREFIX "Failed to resolve %wZ() API.\n", apiName));
+			KdPrint((DRIVER_PREFIX "Failed to resolve %wZ() API.\n", routineName));
 			break;
 		}
 		else
 		{
-			KdPrint((DRIVER_PREFIX "%wZ() API is at 0x%p.\n", apiName, (PVOID)RtlFindExportedRoutineByName));
+			KdPrint((DRIVER_PREFIX "%wZ() API is at 0x%p.\n", routineName, (PVOID)RtlFindExportedRoutineByName));
 		}
 
-		::RtlInitUnicodeString(&apiName, L"KeInsertQueueApc");
-		KeInsertQueueApc = (PKeInsertQueueApc)::MmGetSystemRoutineAddress(&apiName);
+		::RtlInitUnicodeString(&routineName, L"KeInsertQueueApc");
+		KeInsertQueueApc = (PKeInsertQueueApc)::MmGetSystemRoutineAddress(&routineName);
 
 		if (PsGetProcessPeb == nullptr)
 		{
-			KdPrint((DRIVER_PREFIX "Failed to resolve %wZ() API.\n", apiName));
+			KdPrint((DRIVER_PREFIX "Failed to resolve %wZ() API.\n", routineName));
 			break;
 		}
 		else
 		{
-			KdPrint((DRIVER_PREFIX "%wZ() API is at 0x%p.\n", apiName, (PVOID)RtlFindExportedRoutineByName));
+			KdPrint((DRIVER_PREFIX "%wZ() API is at 0x%p.\n", routineName, (PVOID)RtlFindExportedRoutineByName));
 		}
 
 		ntstatus = ::IoCreateDevice(
@@ -281,8 +279,7 @@ NTSTATUS DriverEntry(
 
 void DriverUnload(_In_ PDRIVER_OBJECT DriverObject)
 {
-	UNICODE_STRING symlinkPath{ 0 };
-	::RtlInitUnicodeString(&symlinkPath, SYMLINK_PATH);
+	UNICODE_STRING symlinkPath = RTL_CONSTANT_STRING(SYMLINK_PATH);
 	::IoDeleteSymbolicLink(&symlinkPath);
 	::IoDeleteDevice(DriverObject->DeviceObject);
 
@@ -426,7 +423,7 @@ NTSTATUS OnDeviceControl(
 			pLibraryPath->MaximumLength = (USHORT)(sizeof(WCHAR) * 256);
 			pLibraryPath->Buffer = (PWCH)((ULONG_PTR)pPathBuffer + sizeof(UNICODE_STRING));
 			::memcpy(pLibraryPath->Buffer, &pContext->LibraryPath, sizeof(WCHAR) * 256);
-			((WCHAR*)pLibraryPath->Buffer)[256] = NULL;
+			((WCHAR*)pLibraryPath->Buffer)[256] = NULL; // ensure null-terminator for wcslen()
 			pLibraryPath->Length = (USHORT)(sizeof(WCHAR) * ::wcslen(pLibraryPath->Buffer));
 
 			KdPrint((DRIVER_PREFIX "Library to inject: %wZ.\n", pPathBuffer));
