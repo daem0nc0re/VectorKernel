@@ -62,13 +62,9 @@ namespace ProcHideClient.Library
                 NativeMethods.NtClose(hDevice);
 
                 if (ntstatus != Win32Consts.STATUS_SUCCESS)
-                {
                     Console.WriteLine("[-] Failed to NtDeviceIoControlFile() (NTSTATUS = 0x{0}).", ntstatus.ToString("X8"));
-                }
                 else
-                {
                     Console.WriteLine("[+] Target process is hidden successfully (PID = {0}).", pid);
-                }
             } while (false);
             
             Marshal.FreeHGlobal(pInBuffer);
