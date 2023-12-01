@@ -22,7 +22,6 @@ NTSTATUS OnDeviceControl(
 	_Inout_ PIRP Irp
 );
 
-
 //
 // Driver routines
 //
@@ -38,10 +37,8 @@ NTSTATUS DriverEntry(
 
 	do
 	{
-		UNICODE_STRING devicePath{ 0 };
-		UNICODE_STRING symlinkPath{ 0 };
-		::RtlInitUnicodeString(&devicePath, DEVICE_PATH);
-		::RtlInitUnicodeString(&symlinkPath, SYMLINK_PATH);
+		UNICODE_STRING devicePath = RTL_CONSTANT_STRING(DEVICE_PATH);
+		UNICODE_STRING symlinkPath = RTL_CONSTANT_STRING(SYMLINK_PATH);
 
 		ntstatus = ::IoCreateDevice(
 			DriverObject,
@@ -84,8 +81,7 @@ NTSTATUS DriverEntry(
 
 void DriverUnload(_In_ PDRIVER_OBJECT DriverObject)
 {
-	UNICODE_STRING symlinkPath{ 0 };
-	::RtlInitUnicodeString(&symlinkPath, SYMLINK_PATH);
+	UNICODE_STRING symlinkPath = RTL_CONSTANT_STRING(SYMLINK_PATH);
 	::IoDeleteSymbolicLink(&symlinkPath);
 	::IoDeleteDevice(DriverObject->DeviceObject);
 

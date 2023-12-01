@@ -12,27 +12,12 @@ namespace GetProcHandleClient.Library
         public static bool SpawnChildProcess(int pid, string command)
         {
             NTSTATUS ntstatus;
-            string processName;
             IntPtr hProcess;
             var bSuccess = false;
             IntPtr pInBuffer = Marshal.AllocHGlobal(4);
             IntPtr pOutBuffer = Marshal.AllocHGlobal(IntPtr.Size);
             Marshal.WriteInt32(pInBuffer, pid);
             Marshal.WriteIntPtr(pOutBuffer, IntPtr.Zero);
-
-            try
-            {
-                processName = Process.GetProcessById(pid).ProcessName;
-
-                Console.WriteLine("[*] Target process information.");
-                Console.WriteLine("    [*] Process ID   : {0}", pid);
-                Console.WriteLine("    [*] Process Name : {0}", processName);
-            }
-            catch
-            {
-                Console.WriteLine("[-] Failed to find the specified process.");
-                return false;
-            }
 
             Console.WriteLine("[>] Sending a query to {0}.", Globals.SYMLINK_PATH);
 
@@ -92,6 +77,10 @@ namespace GetProcHandleClient.Library
 
                     Console.WriteLine("[+] Got a handle to the target process (Handle = 0x{0}).", hProcess.ToString("X"));
                 }
+
+                Console.WriteLine("[>] Trying to create child process from the handle.");
+                Console.WriteLine("    [*] Process ID   : {0}", pid);
+                Console.WriteLine("    [*] Process Name : {0}", Utilities.GetImageFileNameByProcessHandle(hProcess) ?? "N/A");
 
                 bSuccess = Utilities.CreateChildProcessByHandle(
                     hProcess,

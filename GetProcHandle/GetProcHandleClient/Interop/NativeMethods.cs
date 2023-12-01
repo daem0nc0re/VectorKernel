@@ -77,5 +77,13 @@ namespace GetProcHandleClient.Interop
             uint InputBufferLength,
             IntPtr OutputBuffer,
             uint OutputBufferLength);
+
+        [DllImport("ntdll.dll")]
+        public static extern NTSTATUS NtQueryInformationProcess(
+            IntPtr ProcessHandle,
+            PROCESSINFOCLASS ProcessInformationClass,
+            IntPtr ProcessInformation,
+            uint ProcessInformationLength,
+            out uint ReturnLength);
     }
 }
