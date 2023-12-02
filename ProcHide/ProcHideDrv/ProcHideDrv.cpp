@@ -361,7 +361,7 @@ void UnlinkListEntry(PLIST_ENTRY pListEntry)
 	pForwardEntry->Blink = pListEntry->Blink;
 	pBackwardEntry->Flink = pListEntry->Flink;
 
-	// To avoid referenced memory corruption when unlinked process is exit, 
+	// To avoid referenced memory corruption when unlinked process is terminated, 
 	// unlinked LIST_ENTRY should reference itself.
 	pListEntry->Flink = pListEntry;
 	pListEntry->Blink = pListEntry;
