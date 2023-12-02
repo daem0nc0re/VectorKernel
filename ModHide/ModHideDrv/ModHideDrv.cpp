@@ -57,7 +57,6 @@ NTSTATUS DriverEntry(
 
 	do
 	{
-		RTL_OSVERSIONINFOW versionInfo{ 0 };
 		UNICODE_STRING devicePath = RTL_CONSTANT_STRING(DEVICE_PATH);
 		UNICODE_STRING symlinkPath = RTL_CONSTANT_STRING(SYMLINK_PATH);
 		g_ModuleEntry = *(PVOID*)((ULONG_PTR)DriverObject + DRIVER_SECTION_OFFSET);
@@ -170,7 +169,7 @@ NTSTATUS OnDeviceControl(
 		do
 		{
 			pCurrentModuleName = (PUNICODE_STRING)((ULONG_PTR)pCurrentEntry + FILE_NAME_OFFSET);
-			KdPrint((DRIVER_PREFIX "Current Module: %wZ\n", pCurrentModuleName));
+			KdPrint((DRIVER_PREFIX "Current Module: %wZ (0x%p)\n", pCurrentModuleName, (PVOID)pCurrentEntry));
 
 			if (::RtlCompareUnicodeString(pCurrentModuleName, &targetModuleName, TRUE) == 0)
 			{
@@ -179,7 +178,8 @@ NTSTATUS OnDeviceControl(
 
 				// Before unlinking the target module, save linked module entry address 
 				// for future usage.
-				g_ModuleEntry = (PVOID)pCurrentEntry->Flink;
+				if ((PVOID)pCurrentEntry == g_ModuleEntry)
+					g_ModuleEntry = (PVOID)pCurrentEntry->Flink;
 
 				// Unlink the target module from module linked list.
 				UnlinkListEntry(pCurrentEntry);
