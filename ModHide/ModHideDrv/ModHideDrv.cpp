@@ -153,6 +153,7 @@ NTSTATUS OnDeviceControl(
 			break;
 		}
 
+		ntstatus = STATUS_NOT_FOUND;
 		::memcpy(&imageFileName, Irp->AssociatedIrp.SystemBuffer, sizeof(WCHAR) * 256);
 		::RtlInitUnicodeString(&targetModuleName, imageFileName);
 		KdPrint((DRIVER_PREFIX "Target module name: %wZ\n", &targetModuleName));
@@ -169,11 +170,18 @@ NTSTATUS OnDeviceControl(
 		do
 		{
 			pCurrentModuleName = (PUNICODE_STRING)((ULONG_PTR)pCurrentEntry + FILE_NAME_OFFSET);
+			KdPrint((DRIVER_PREFIX "Current Module: %wZ\n", pCurrentModuleName));
 
-			if (::RtlCompareUnicodeString(pCurrentModuleName, &targetModuleName, TRUE))
+			if (::RtlCompareUnicodeString(pCurrentModuleName, &targetModuleName, TRUE) == 0)
 			{
 				ntstatus = STATUS_SUCCESS;
 				info = pCurrentModuleName->Length;
+
+				// Before unlinking the target module, save linked module entry address 
+				// for future usage.
+				g_ModuleEntry = (PVOID)pCurrentEntry->Flink;
+
+				// Unlink the target module from module linked list.
 				UnlinkListEntry(pCurrentEntry);
 
 				KdPrint((DRIVER_PREFIX "Found _MODULE_ENTRY for the target module at 0x%p.\n", pCurrentEntry));

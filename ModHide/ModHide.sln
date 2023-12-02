@@ -5,26 +5,48 @@ VisualStudioVersion = 17.8.34316.72
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ModHideDrv", "ModHideDrv\ModHideDrv.vcxproj", "{BDED2735-F9E4-4B2E-9636-4EEDD78FC720}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModHideClient", "ModHideClient\ModHideClient.csproj", "{2FB94059-2D49-4EEA-AAF8-7E89E249644B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
 		Debug|ARM64 = Debug|ARM64
 		Debug|x64 = Debug|x64
+		Release|Any CPU = Release|Any CPU
 		Release|ARM64 = Release|ARM64
 		Release|x64 = Release|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{BDED2735-F9E4-4B2E-9636-4EEDD78FC720}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{BDED2735-F9E4-4B2E-9636-4EEDD78FC720}.Debug|Any CPU.Build.0 = Debug|x64
+		{BDED2735-F9E4-4B2E-9636-4EEDD78FC720}.Debug|Any CPU.Deploy.0 = Debug|x64
 		{BDED2735-F9E4-4B2E-9636-4EEDD78FC720}.Debug|ARM64.ActiveCfg = Debug|ARM64
 		{BDED2735-F9E4-4B2E-9636-4EEDD78FC720}.Debug|ARM64.Build.0 = Debug|ARM64
 		{BDED2735-F9E4-4B2E-9636-4EEDD78FC720}.Debug|ARM64.Deploy.0 = Debug|ARM64
 		{BDED2735-F9E4-4B2E-9636-4EEDD78FC720}.Debug|x64.ActiveCfg = Debug|x64
 		{BDED2735-F9E4-4B2E-9636-4EEDD78FC720}.Debug|x64.Build.0 = Debug|x64
 		{BDED2735-F9E4-4B2E-9636-4EEDD78FC720}.Debug|x64.Deploy.0 = Debug|x64
+		{BDED2735-F9E4-4B2E-9636-4EEDD78FC720}.Release|Any CPU.ActiveCfg = Release|x64
+		{BDED2735-F9E4-4B2E-9636-4EEDD78FC720}.Release|Any CPU.Build.0 = Release|x64
+		{BDED2735-F9E4-4B2E-9636-4EEDD78FC720}.Release|Any CPU.Deploy.0 = Release|x64
 		{BDED2735-F9E4-4B2E-9636-4EEDD78FC720}.Release|ARM64.ActiveCfg = Release|ARM64
 		{BDED2735-F9E4-4B2E-9636-4EEDD78FC720}.Release|ARM64.Build.0 = Release|ARM64
 		{BDED2735-F9E4-4B2E-9636-4EEDD78FC720}.Release|ARM64.Deploy.0 = Release|ARM64
 		{BDED2735-F9E4-4B2E-9636-4EEDD78FC720}.Release|x64.ActiveCfg = Release|x64
 		{BDED2735-F9E4-4B2E-9636-4EEDD78FC720}.Release|x64.Build.0 = Release|x64
 		{BDED2735-F9E4-4B2E-9636-4EEDD78FC720}.Release|x64.Deploy.0 = Release|x64
+		{2FB94059-2D49-4EEA-AAF8-7E89E249644B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2FB94059-2D49-4EEA-AAF8-7E89E249644B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2FB94059-2D49-4EEA-AAF8-7E89E249644B}.Debug|ARM64.ActiveCfg = Debug|Any CPU
+		{2FB94059-2D49-4EEA-AAF8-7E89E249644B}.Debug|ARM64.Build.0 = Debug|Any CPU
+		{2FB94059-2D49-4EEA-AAF8-7E89E249644B}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{2FB94059-2D49-4EEA-AAF8-7E89E249644B}.Debug|x64.Build.0 = Debug|Any CPU
+		{2FB94059-2D49-4EEA-AAF8-7E89E249644B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2FB94059-2D49-4EEA-AAF8-7E89E249644B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2FB94059-2D49-4EEA-AAF8-7E89E249644B}.Release|ARM64.ActiveCfg = Release|Any CPU
+		{2FB94059-2D49-4EEA-AAF8-7E89E249644B}.Release|ARM64.Build.0 = Release|Any CPU
+		{2FB94059-2D49-4EEA-AAF8-7E89E249644B}.Release|x64.ActiveCfg = Release|Any CPU
+		{2FB94059-2D49-4EEA-AAF8-7E89E249644B}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
