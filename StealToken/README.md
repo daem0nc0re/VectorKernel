@@ -1,6 +1,6 @@
 # StealToken
 
-PoCs to performa token stealing from kernelmode.
+PoCs to perform token stealing from kernelmode.
 
 ## Installation
 
