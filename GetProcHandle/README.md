@@ -28,7 +28,7 @@ Usage: GetProcHandleClient.exe [Options]
 ```
 
 Specifies PID for PPID Spoofing with `-p` option.
-Command to execute can be specified with `-c` option (default is "cmd.exe"):
+Command to execute can be specified with `-c` option (default is `cmd.exe`):
 
 ```
 PS C:\Dev> .\GetProcHandleClient.exe -p 696 -c powershell.exe
