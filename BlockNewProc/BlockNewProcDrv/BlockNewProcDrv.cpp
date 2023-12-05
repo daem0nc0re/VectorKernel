@@ -23,6 +23,7 @@ typedef struct _BLOCK_FILENAME_INFO
 //
 // Global variables
 //
+FAST_MUTEX g_FastMutex{ 0 };
 WCHAR g_ImageFileNameSuffix[258]{ 0 }; // top byte for '\', last byte for null-terminator
 BOOLEAN g_CallbackRegistered = FALSE;
 
@@ -66,6 +67,8 @@ NTSTATUS DriverEntry(
 	{
 		UNICODE_STRING devicePath = RTL_CONSTANT_STRING(DEVICE_PATH);
 		UNICODE_STRING symlinkPath = RTL_CONSTANT_STRING(SYMLINK_PATH);
+
+		::ExInitializeFastMutex(&g_FastMutex);
 
 		ntstatus = ::IoCreateDevice(
 			DriverObject,
@@ -159,6 +162,8 @@ NTSTATUS OnDeviceControl(
 			break;
 		}
 
+		::ExAcquireFastMutex(&g_FastMutex);
+
 		::memset(g_ImageFileNameSuffix, 0, sizeof(WCHAR) * 258);
 		g_ImageFileNameSuffix[0] = L'\\';
 		::memcpy(&g_ImageFileNameSuffix[1], Irp->AssociatedIrp.SystemBuffer, sizeof(BLOCK_FILENAME_INFO));
@@ -185,12 +190,16 @@ NTSTATUS OnDeviceControl(
 			}
 		}
 
+		::ExReleaseFastMutex(&g_FastMutex);
+
 		info = ::wcslen(g_ImageFileNameSuffix) * sizeof(WCHAR);
 		ntstatus = STATUS_SUCCESS;
 
 		break;
 
 	case IOCTL_UNREGISTER_CALLBACK:
+		::ExAcquireFastMutex(&g_FastMutex);
+
 		if (g_CallbackRegistered)
 		{
 			::memset(g_ImageFileNameSuffix, 0, sizeof(WCHAR) * 258);
@@ -213,6 +222,8 @@ NTSTATUS OnDeviceControl(
 		{
 			KdPrint((DRIVER_PREFIX "Process Notify Callback is not registered.\n"));
 		}
+
+		::ExReleaseFastMutex(&g_FastMutex);
 	}
 
 	Irp->IoStatus.Status = ntstatus;
@@ -236,6 +247,8 @@ void ProcessBlockRoutine(
 
 	if (CreateInfo != nullptr)
 	{
+		::ExAcquireFastMutex(&g_FastMutex);
+
 		if (::wcslen(g_ImageFileNameSuffix) > 0)
 		{
 			UNICODE_STRING suffix{ 0 };
@@ -255,5 +268,7 @@ void ProcessBlockRoutine(
 		{
 			KdPrint((DRIVER_PREFIX "Allowed Process: %wZ\n", (PUNICODE_STRING)CreateInfo->ImageFileName));
 		}
+
+		::ExReleaseFastMutex(&g_FastMutex);
 	}
 }
