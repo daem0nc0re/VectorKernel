@@ -7,8 +7,8 @@ All modules support 64bit OS only.
 > __NOTE__
 >
 > Some modules use `ExAllocatePool2` API to allocate kernel pool memory.
-> `ExAllocatePool2` API is not supported in Windows before Windows 10 Version 2004.
-> If you want to test the modules, replace `ExAllocatePool2` API with `ExAllocatePoolWithTag` API.
+> `ExAllocatePool2` API is not supported in OSes before Windows 10 Version 2004.
+> If you want to test the modules in old OSes, replace `ExAllocatePool2` API with `ExAllocatePoolWithTag` API.
 
 
 ## Modules
