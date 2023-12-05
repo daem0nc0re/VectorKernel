@@ -28,6 +28,14 @@ Detailed information is given in README.md in each project's directories.
 | [StealToken](./StealToken/) | PoCs to perform token stealing from kernelmode. |
 
 
+## TODO
+
+More PoCs especially about following things will be added later:
+
+* Notify callback
+* Filesystem mini-filter
+* Network mini-filter
+
 ## Recommended References
 
 * [Pavel Yosifovich, _Windows Kernel Programming, 2nd Edition_ (Independently published, 2023)](https://leanpub.com/windowskernelprogrammingsecondedition)
