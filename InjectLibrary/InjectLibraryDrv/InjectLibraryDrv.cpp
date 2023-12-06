@@ -5,6 +5,7 @@
 #define SYMLINK_PATH L"\\??\\InjectLibrary"
 #define DRIVER_TAG 'lnKV'
 
+#pragma warning(disable: 4201) // This warning is caused by SECTION_IMAGE_INFORMATION definition
 #pragma warning(disable: 4996) // This warning is caused when use old ExAllocatePoolWithTag() API.
 
 //
@@ -20,6 +21,57 @@ typedef struct _INJECT_CONTEXT
 	ULONG ThreadId;
 	WCHAR LibraryPath[256];
 } INJECT_CONTEXT, *PINJECT_CONTEXT;
+
+//
+// Windows definition
+//
+typedef struct _SECTION_IMAGE_INFORMATION
+{
+	PVOID TransferAddress;
+	ULONG ZeroBits;
+	SIZE_T MaximumStackSize;
+	SIZE_T CommittedStackSize;
+	ULONG SubSystemType;
+	union
+	{
+		struct
+		{
+			USHORT SubSystemMinorVersion;
+			USHORT SubSystemMajorVersion;
+		};
+		ULONG SubSystemVersion;
+	};
+	union
+	{
+		struct
+		{
+			USHORT MajorOperatingSystemVersion;
+			USHORT MinorOperatingSystemVersion;
+		};
+		ULONG OperatingSystemVersion;
+	};
+	USHORT ImageCharacteristics;
+	USHORT DllCharacteristics;
+	USHORT Machine;
+	BOOLEAN ImageContainsCode;
+	union
+	{
+		UCHAR ImageFlags;
+		struct
+		{
+			UCHAR ComPlusNativeReady : 1;
+			UCHAR ComPlusILOnly : 1;
+			UCHAR ImageDynamicallyRelocated : 1;
+			UCHAR ImageMappedFlat : 1;
+			UCHAR BaseBelow4gb : 1;
+			UCHAR ComPlusPrefer32bit : 1;
+			UCHAR Reserved : 2;
+		};
+	};
+	ULONG LoaderFlags;
+	ULONG ImageFileSize;
+	ULONG CheckSum;
+} SECTION_IMAGE_INFORMATION, *PSECTION_IMAGE_INFORMATION;
 
 //
 // Windows structs from winternl.h
@@ -63,6 +115,16 @@ typedef struct _PEB
 //
 // enum definition
 //
+typedef enum _SECTION_INFORMATION_CLASS
+{
+	SectionBasicInformation, // q; SECTION_BASIC_INFORMATION
+	SectionImageInformation, // q; SECTION_IMAGE_INFORMATION
+	SectionRelocationInformation, // q; ULONG_PTR RelocationDelta // name:wow64:whNtQuerySection_SectionRelocationInformation // since WIN7
+	SectionOriginalBaseInformation, // q; PVOID BaseAddress // since REDSTONE
+	SectionInternalImageInformation, // SECTION_INTERNAL_IMAGE_INFORMATION // since REDSTONE2
+	MaxSectionInfoClass
+} SECTION_INFORMATION_CLASS;
+
 typedef enum _KAPC_ENVIRONMENT
 {
 	OriginalApcEnvironment,
@@ -74,6 +136,13 @@ typedef enum _KAPC_ENVIRONMENT
 //
 // Function type definition
 //
+typedef NTSTATUS(NTAPI* PZwQuerySection)(
+	_In_ HANDLE SectionHandle,
+	_In_ SECTION_INFORMATION_CLASS SectionInformationClass,
+	_Out_writes_bytes_(SectionInformationLength) PVOID SectionInformation,
+	_In_ SIZE_T SectionInformationLength,
+	_Out_opt_ PSIZE_T ReturnLength
+);
 typedef VOID (NTAPI *PKNORMAL_ROUTINE)(
 	_In_opt_ PVOID NormalContext,
 	_In_opt_ PVOID SystemArgument1,
@@ -123,8 +192,9 @@ typedef BOOLEAN (NTAPI *PKeInsertQueueApc)(
 // API address storage
 //
 PLdrLoadDll LdrLoadDll = nullptr;
-PRtlFindExportedRoutineByName RtlFindExportedRoutineByName = nullptr;
+PZwQuerySection ZwQuerySection = nullptr;
 PPsGetProcessPeb PsGetProcessPeb = nullptr;
+PRtlFindExportedRoutineByName RtlFindExportedRoutineByName = nullptr;
 PKeAlertThread KeAlertThread = nullptr;
 PKeInitializeApc KeInitializeApc = nullptr;
 PKeInsertQueueApc KeInsertQueueApc = nullptr;
@@ -141,6 +211,7 @@ NTSTATUS OnDeviceControl(
 	_Inout_ PDEVICE_OBJECT DeviceObject,
 	_Inout_ PIRP Irp
 );
+PVOID GetNtdllBase();
 PVOID GetLdrLoadDllAddress();
 VOID NTAPI ApcRoutine(
 	_In_ PKAPC* Apc,
@@ -172,6 +243,19 @@ NTSTATUS DriverEntry(
 		UNICODE_STRING devicePath = RTL_CONSTANT_STRING(DEVICE_PATH);
 		UNICODE_STRING symlinkPath = RTL_CONSTANT_STRING(SYMLINK_PATH);
 		UNICODE_STRING routineName{ 0 };
+
+		::RtlInitUnicodeString(&routineName, L"ZwQuerySection");
+		ZwQuerySection = (PZwQuerySection)::MmGetSystemRoutineAddress(&routineName);
+
+		if (ZwQuerySection == nullptr)
+		{
+			KdPrint((DRIVER_PREFIX "Failed to resolve %wZ() API.\n", routineName));
+			break;
+		}
+		else
+		{
+			KdPrint((DRIVER_PREFIX "%wZ() API is at 0x%p.\n", routineName, (PVOID)ZwQuerySection));
+		}
 
 		::RtlInitUnicodeString(&routineName, L"PsGetProcessPeb");
 		PsGetProcessPeb = (PPsGetProcessPeb)::MmGetSystemRoutineAddress(&routineName);
@@ -477,6 +561,45 @@ NTSTATUS OnDeviceControl(
 //
 // Helper functions
 //
+PVOID GetNtdllBase()
+{
+	NTSTATUS ntstatus;
+	PVOID pNtdll = nullptr;
+	HANDLE hSection = nullptr;
+	UNICODE_STRING ntdllPath = RTL_CONSTANT_STRING(L"\\KnownDlls\\ntdll.dll");
+	OBJECT_ATTRIBUTES objectAttributes{ 0 };
+	SIZE_T nInfoLength = sizeof(SECTION_IMAGE_INFORMATION);
+	PVOID pInfoBuffer = ::ExAllocatePool2(NonPagedPool, nInfoLength, (ULONG)DRIVER_TAG);
+
+	if (pInfoBuffer == nullptr)
+		return nullptr;
+
+	InitializeObjectAttributes(&objectAttributes, &ntdllPath, OBJ_CASE_INSENSITIVE, nullptr, nullptr);
+	ntstatus = ::ZwOpenSection(
+	    &hSection,
+		SECTION_QUERY,
+		&objectAttributes);
+
+	if (NT_SUCCESS(ntstatus))
+	{
+		ntstatus = ZwQuerySection(
+			hSection,
+			SectionImageInformation,
+			pInfoBuffer,
+			nInfoLength,
+			&nInfoLength);
+		::ZwClose(hSection);
+
+		if (NT_SUCCESS(ntstatus))
+			pNtdll = ((PSECTION_IMAGE_INFORMATION)pInfoBuffer)->TransferAddress;
+	}
+
+	::ExFreePoolWithTag(pInfoBuffer, (ULONG)DRIVER_TAG);
+
+	return pNtdll;
+}
+
+
 PVOID GetLdrLoadDllAddress()
 {
 	PVOID pLdrLoadDll = nullptr;
