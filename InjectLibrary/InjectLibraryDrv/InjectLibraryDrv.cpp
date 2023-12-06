@@ -189,7 +189,7 @@ NTSTATUS DriverEntry(
 		::RtlInitUnicodeString(&routineName, L"RtlFindExportedRoutineByName");
 		RtlFindExportedRoutineByName = (PRtlFindExportedRoutineByName)::MmGetSystemRoutineAddress(&routineName);
 
-		if (PsGetProcessPeb == nullptr)
+		if (RtlFindExportedRoutineByName == nullptr)
 		{
 			KdPrint((DRIVER_PREFIX "Failed to resolve %wZ() API.\n", routineName));
 			break;
@@ -202,40 +202,40 @@ NTSTATUS DriverEntry(
 		::RtlInitUnicodeString(&routineName, L"KeAlertThread");
 		KeAlertThread = (PKeAlertThread)::MmGetSystemRoutineAddress(&routineName);
 
-		if (PsGetProcessPeb == nullptr)
+		if (KeAlertThread == nullptr)
 		{
 			KdPrint((DRIVER_PREFIX "Failed to resolve %wZ() API.\n", routineName));
 			break;
 		}
 		else
 		{
-			KdPrint((DRIVER_PREFIX "%wZ() API is at 0x%p.\n", routineName, (PVOID)RtlFindExportedRoutineByName));
+			KdPrint((DRIVER_PREFIX "%wZ() API is at 0x%p.\n", routineName, (PVOID)KeAlertThread));
 		}
 
 		::RtlInitUnicodeString(&routineName, L"KeInitializeApc");
 		KeInitializeApc = (PKeInitializeApc)::MmGetSystemRoutineAddress(&routineName);
 
-		if (PsGetProcessPeb == nullptr)
+		if (KeInitializeApc == nullptr)
 		{
 			KdPrint((DRIVER_PREFIX "Failed to resolve %wZ() API.\n", routineName));
 			break;
 		}
 		else
 		{
-			KdPrint((DRIVER_PREFIX "%wZ() API is at 0x%p.\n", routineName, (PVOID)RtlFindExportedRoutineByName));
+			KdPrint((DRIVER_PREFIX "%wZ() API is at 0x%p.\n", routineName, (PVOID)KeInitializeApc));
 		}
 
 		::RtlInitUnicodeString(&routineName, L"KeInsertQueueApc");
 		KeInsertQueueApc = (PKeInsertQueueApc)::MmGetSystemRoutineAddress(&routineName);
 
-		if (PsGetProcessPeb == nullptr)
+		if (KeInsertQueueApc == nullptr)
 		{
 			KdPrint((DRIVER_PREFIX "Failed to resolve %wZ() API.\n", routineName));
 			break;
 		}
 		else
 		{
-			KdPrint((DRIVER_PREFIX "%wZ() API is at 0x%p.\n", routineName, (PVOID)RtlFindExportedRoutineByName));
+			KdPrint((DRIVER_PREFIX "%wZ() API is at 0x%p.\n", routineName, (PVOID)KeInsertQueueApc));
 		}
 
 		ntstatus = ::IoCreateDevice(
