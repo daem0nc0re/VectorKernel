@@ -566,15 +566,17 @@ PVOID GetNtdllBase()
 	NTSTATUS ntstatus;
 	PVOID pNtdll = nullptr;
 	HANDLE hSection = nullptr;
-	UNICODE_STRING ntdllPath = RTL_CONSTANT_STRING(L"\\KnownDlls\\ntdll.dll");
+	UNICODE_STRING objectPath = RTL_CONSTANT_STRING(L"\\KnownDlls\\ntdll.dll");
 	OBJECT_ATTRIBUTES objectAttributes{ 0 };
 	SIZE_T nInfoLength = sizeof(SECTION_IMAGE_INFORMATION);
-	PVOID pInfoBuffer = ::ExAllocatePool2(NonPagedPool, nInfoLength, (ULONG)DRIVER_TAG);
+	SECTION_IMAGE_INFORMATION sectionImageInfo{ 0 };
 
-	if (pInfoBuffer == nullptr)
-		return nullptr;
-
-	InitializeObjectAttributes(&objectAttributes, &ntdllPath, OBJ_CASE_INSENSITIVE, nullptr, nullptr);
+	InitializeObjectAttributes(
+		&objectAttributes,
+		&objectPath,
+		OBJ_CASE_INSENSITIVE | OBJ_KERNEL_HANDLE,
+		nullptr,
+		nullptr);
 	ntstatus = ::ZwOpenSection(
 	    &hSection,
 		SECTION_QUERY,
@@ -585,16 +587,14 @@ PVOID GetNtdllBase()
 		ntstatus = ZwQuerySection(
 			hSection,
 			SectionImageInformation,
-			pInfoBuffer,
+			&sectionImageInfo,
 			nInfoLength,
 			&nInfoLength);
 		::ZwClose(hSection);
 
 		if (NT_SUCCESS(ntstatus))
-			pNtdll = ((PSECTION_IMAGE_INFORMATION)pInfoBuffer)->TransferAddress;
+			pNtdll = sectionImageInfo.TransferAddress;
 	}
-
-	::ExFreePoolWithTag(pInfoBuffer, (ULONG)DRIVER_TAG);
 
 	return pNtdll;
 }
