@@ -74,45 +74,6 @@ typedef struct _SECTION_IMAGE_INFORMATION
 } SECTION_IMAGE_INFORMATION, *PSECTION_IMAGE_INFORMATION;
 
 //
-// Windows structs from winternl.h
-//
-typedef struct _PEB_LDR_DATA
-{
-	UCHAR Reserved1[8];
-	PVOID Reserved2[3];
-	LIST_ENTRY InMemoryOrderModuleList;
-} PEB_LDR_DATA, * PPEB_LDR_DATA;
-
-typedef struct _LDR_DATA_TABLE_ENTRY
-{
-	PVOID Reserved1[2];
-	LIST_ENTRY InMemoryOrderLinks;
-	PVOID Reserved2[2];
-	PVOID DllBase;
-	PVOID Reserved3[2];
-	UNICODE_STRING FullDllName;
-	UCHAR Reserved4[8];
-	PVOID Reserved5[3];
-#pragma warning(push)
-#pragma warning(disable: 4201) // we'll always use the Microsoft compiler
-	union {
-		ULONG CheckSum;
-		PVOID Reserved6;
-	} DUMMYUNIONNAME;
-#pragma warning(pop)
-	ULONG TimeDateStamp;
-} LDR_DATA_TABLE_ENTRY, * PLDR_DATA_TABLE_ENTRY;
-
-typedef struct _PEB
-{
-	UCHAR Reserved1[2];
-	UCHAR BeingDebugged;
-	UCHAR Reserved2[1];
-	PVOID Reserved3[2];
-	PPEB_LDR_DATA Ldr;
-} PEB, *PPEB;
-
-//
 // enum definition
 //
 typedef enum _SECTION_INFORMATION_CLASS
@@ -166,7 +127,6 @@ typedef PVOID (NTAPI *PRtlFindExportedRoutineByName)(
 	_In_ PVOID ImageBase,
 	_In_ PCHAR RoutineName
 );
-typedef PPEB (NTAPI *PPsGetProcessPeb)(_In_ PEPROCESS Process);
 typedef BOOLEAN (NTAPI *PKeAlertThread)(
 	_In_ PKTHREAD Thread,
 	_In_ KPROCESSOR_MODE AlertMode
