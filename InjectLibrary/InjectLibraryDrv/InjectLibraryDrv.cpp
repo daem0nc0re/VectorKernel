@@ -452,8 +452,8 @@ NTSTATUS OnDeviceControl(
 			break;
 		}
 
-		KdPrint((DRIVER_PREFIX "%u bytes buffer is allocate at 0x%p in PID %u.\n",
-			HandleToULong((HANDLE)nBufferSize),
+		KdPrint((DRIVER_PREFIX "%Iu bytes buffer is allocate at 0x%p in PID %u.\n",
+			nBufferSize,
 			pPathBuffer,
 			HandleToULong(clientId.UniqueProcess)));
 
@@ -472,7 +472,6 @@ NTSTATUS OnDeviceControl(
 			::KeStackAttachProcess(::PsGetThreadProcess(pThread), &apcState);
 			bProcessAttached = TRUE;
 
-			::ProbeForRead(pPathBuffer, 0x220, (ULONG)__alignof(UCHAR));
 			::memcpy(pPathBuffer, pUnicodeStringStorage, 0x220);
 
 			::KeUnstackDetachProcess(&apcState);
