@@ -193,7 +193,6 @@ typedef BOOLEAN (NTAPI *PKeInsertQueueApc)(
 //
 PLdrLoadDll LdrLoadDll = nullptr;
 PZwQuerySection ZwQuerySection = nullptr;
-PPsGetProcessPeb PsGetProcessPeb = nullptr;
 PRtlFindExportedRoutineByName RtlFindExportedRoutineByName = nullptr;
 PKeAlertThread KeAlertThread = nullptr;
 PKeInitializeApc KeInitializeApc = nullptr;
@@ -212,7 +211,7 @@ NTSTATUS OnDeviceControl(
 	_Inout_ PIRP Irp
 );
 PVOID GetNtdllBase();
-PVOID GetLdrLoadDllAddress();
+PVOID GetProcAddressFromKernel(_In_ PVOID pLibrary, _In_ PCHAR procName);
 VOID NTAPI ApcRoutine(
 	_In_ PKAPC* Apc,
 	_Inout_ PKNORMAL_ROUTINE* NormalRoutine,
@@ -255,19 +254,6 @@ NTSTATUS DriverEntry(
 		else
 		{
 			KdPrint((DRIVER_PREFIX "%wZ() API is at 0x%p.\n", routineName, (PVOID)ZwQuerySection));
-		}
-
-		::RtlInitUnicodeString(&routineName, L"PsGetProcessPeb");
-		PsGetProcessPeb = (PPsGetProcessPeb)::MmGetSystemRoutineAddress(&routineName);
-
-		if (PsGetProcessPeb == nullptr)
-		{
-			KdPrint((DRIVER_PREFIX "Failed to resolve %wZ() API.\n", routineName));
-			break;
-		}
-		else
-		{
-			KdPrint((DRIVER_PREFIX "%wZ() API is at 0x%p.\n", routineName, (PVOID)PsGetProcessPeb));
 		}
 
 		::RtlInitUnicodeString(&routineName, L"RtlFindExportedRoutineByName");
@@ -401,7 +387,10 @@ NTSTATUS OnDeviceControl(
 	PVOID pPathBuffer = nullptr;
 	PKAPC pKapc = nullptr;
 	HANDLE hProcess = nullptr;
-	SIZE_T nBufferSize = sizeof(UNICODE_STRING) + (sizeof(WCHAR) * 256) + sizeof(WCHAR); // Add null-terminator at the end.
+	UCHAR pUnicodeStringStorage[0x220]{ 0 }; // sufficient to store packed _UNICODE_STRING with null-terminator
+	PVOID pUnicodeStringBuffer = (PVOID)((ULONG_PTR)pUnicodeStringStorage + sizeof(UNICODE_STRING));
+	SIZE_T nBufferSize = 0x220u;
+	BOOLEAN bProcessAttached = FALSE;
 	KAPC_STATE apcState{ 0 };
 	CLIENT_ID clientId{ 0 };
 	OBJECT_ATTRIBUTES objectAttributes{ 0 };
@@ -418,7 +407,7 @@ NTSTATUS OnDeviceControl(
 		}
 
 		pContext = (PINJECT_CONTEXT)Irp->AssociatedIrp.SystemBuffer;
-		//pKapc = (PKAPC)::ExAllocatePool2(POOL_FLAG_NON_PAGED, sizeof(KAPC), (ULONG)DRIVER_TAG);
+		// pKapc = (PKAPC)::ExAllocatePool2(POOL_FLAG_NON_PAGED, sizeof(KAPC), (ULONG)DRIVER_TAG);
 		pKapc = (PKAPC)::ExAllocatePoolWithTag(NonPagedPool, sizeof(KAPC), (ULONG)DRIVER_TAG);
 
 		if (pKapc == nullptr)
@@ -432,7 +421,16 @@ NTSTATUS OnDeviceControl(
 		}
 
 		if (LdrLoadDll == nullptr)
-			LdrLoadDll = (PLdrLoadDll)GetLdrLoadDllAddress();
+		{
+			PVOID pNtdll = GetNtdllBase();
+
+			if (pNtdll == nullptr)
+				break;
+
+			KdPrint((DRIVER_PREFIX "ntdll.dll should be at 0x%p.\n", pNtdll));
+
+			LdrLoadDll = (PLdrLoadDll)GetProcAddressFromKernel(pNtdll, "LdrLoadDll");
+		}
 
 		if (LdrLoadDll == nullptr)
 		{
@@ -493,26 +491,46 @@ NTSTATUS OnDeviceControl(
 				ntstatus));
 			break;
 		}
-		else
+
+		KdPrint((DRIVER_PREFIX "%u bytes buffer is allocate at 0x%p in PID %u.\n",
+			HandleToULong((HANDLE)nBufferSize),
+			pPathBuffer,
+			HandleToULong(clientId.UniqueProcess)));
+
+		// Build packed _UNICODE_STRING data in kernel space before writing it in user space
+		::memset((PVOID)pUnicodeStringStorage, 0, 0x220);
+		((PUNICODE_STRING)pUnicodeStringStorage)->MaximumLength = (USHORT)(sizeof(WCHAR) * 256);
+		((PUNICODE_STRING)pUnicodeStringStorage)->Buffer = (PWCH)((ULONG_PTR)pPathBuffer + sizeof(UNICODE_STRING));
+		::memcpy(pUnicodeStringBuffer, &pContext->LibraryPath, sizeof(WCHAR) * 256);
+		((PUNICODE_STRING)pUnicodeStringStorage)->Length = (USHORT)(sizeof(WCHAR) * ::wcslen((PWCHAR)pUnicodeStringBuffer));
+
+		KdPrint((DRIVER_PREFIX "Library to inject: %ws.\n", (PWCHAR)pUnicodeStringBuffer));
+
+		__try
 		{
-			KdPrint((DRIVER_PREFIX "%u bytes buffer is allocate at 0x%p in PID %u.\n",
-				HandleToULong((HANDLE)nBufferSize),
-				pPathBuffer,
-				HandleToULong(clientId.UniqueProcess)));
-
-			// Write DLL path (_UNICODE_STRING) in the target thread memory.
+			// Copy packed _UNICODE_STRING data to user space
 			::KeStackAttachProcess(::PsGetThreadProcess(pThread), &apcState);
+			bProcessAttached = TRUE;
 
-			auto pLibraryPath = (PUNICODE_STRING)pPathBuffer;
-			pLibraryPath->MaximumLength = (USHORT)(sizeof(WCHAR) * 256);
-			pLibraryPath->Buffer = (PWCH)((ULONG_PTR)pPathBuffer + sizeof(UNICODE_STRING));
-			::memcpy(pLibraryPath->Buffer, &pContext->LibraryPath, sizeof(WCHAR) * 256);
-			((WCHAR*)pLibraryPath->Buffer)[256] = NULL; // ensure null-terminator for wcslen()
-			pLibraryPath->Length = (USHORT)(sizeof(WCHAR) * ::wcslen(pLibraryPath->Buffer));
-
-			KdPrint((DRIVER_PREFIX "Library to inject: %wZ.\n", pPathBuffer));
+			::ProbeForRead(pPathBuffer, 0x220, (ULONG)__alignof(UCHAR));
+			::memcpy(pPathBuffer, pUnicodeStringStorage, 0x220);
 
 			::KeUnstackDetachProcess(&apcState);
+			bProcessAttached = FALSE;
+		}
+		__except (EXCEPTION_EXECUTE_HANDLER)
+		{
+			KdPrint((DRIVER_PREFIX "Access violation in user space.\n"));
+
+			ntstatus = STATUS_ACCESS_VIOLATION;
+
+			if (bProcessAttached)
+			{
+				::KeUnstackDetachProcess(&apcState);
+				bProcessAttached = FALSE;
+			}
+
+			break;
 		}
 
 		KeInitializeApc(
@@ -577,10 +595,7 @@ PVOID GetNtdllBase()
 		OBJ_CASE_INSENSITIVE | OBJ_KERNEL_HANDLE,
 		nullptr,
 		nullptr);
-	ntstatus = ::ZwOpenSection(
-	    &hSection,
-		SECTION_QUERY,
-		&objectAttributes);
+	ntstatus = ::ZwOpenSection(&hSection, SECTION_QUERY, &objectAttributes);
 
 	if (NT_SUCCESS(ntstatus))
 	{
@@ -600,50 +615,23 @@ PVOID GetNtdllBase()
 }
 
 
-PVOID GetLdrLoadDllAddress()
+PVOID GetProcAddressFromKernel(_In_ PVOID pLibrary, _In_ PCHAR procName)
 {
-	PVOID pLdrLoadDll = nullptr;
+	PVOID pProcedure = nullptr;
 
-	do
+	if (pLibrary == nullptr)
+		return nullptr;
+
+	__try
 	{
-		PLIST_ENTRY pTopEntry = nullptr;
-		PLIST_ENTRY pCurrentEntry = nullptr;
-		PVOID pNtdll = nullptr;
-		ULONG nModuleListOffset = FIELD_OFFSET(LDR_DATA_TABLE_ENTRY, InMemoryOrderLinks);
-		UNICODE_STRING ntdllName = RTL_CONSTANT_STRING(L"\\NTDLL.DLL");
-		PEPROCESS pCurrentProcess = ::IoGetCurrentProcess();
+		pProcedure = ::RtlFindExportedRoutineByName(pLibrary, procName);
+	}
+	__except (EXCEPTION_EXECUTE_HANDLER)
+	{
+		pProcedure = nullptr;
+	}
 
-		if (pCurrentProcess == nullptr)
-			break;
-
-		PPEB pCurrentPeb = PsGetProcessPeb(pCurrentProcess);
-
-		if (pCurrentPeb == nullptr)
-			break;
-
-		pTopEntry = pCurrentPeb->Ldr->InMemoryOrderModuleList.Flink;
-		pCurrentEntry = pTopEntry;
-
-		while (pCurrentEntry->Flink != pTopEntry)
-		{
-			auto entry = (PLDR_DATA_TABLE_ENTRY)((ULONG_PTR)pCurrentEntry - nModuleListOffset);
-
-			if (::RtlSuffixUnicodeString(&ntdllName, &entry->FullDllName, TRUE))
-			{
-				pNtdll = entry->DllBase;
-				break;
-			}
-
-			pCurrentEntry = pCurrentEntry->Flink;
-		}
-
-		if (pNtdll == nullptr)
-			break;
-
-		pLdrLoadDll = RtlFindExportedRoutineByName(pNtdll, "LdrLoadDll");
-	} while (false);
-
-	return pLdrLoadDll;
+	return pProcedure;
 }
 
 
