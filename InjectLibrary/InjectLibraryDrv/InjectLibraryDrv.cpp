@@ -312,7 +312,7 @@ NTSTATUS DriverEntry(
 		}
 		else
 		{
-			KdPrint((DRIVER_PREFIX "LdrLoadDll() API is at 0x%p.\n", (PVOID)LdrLoadDll));
+			KdPrint((DRIVER_PREFIX "LdrLoadDll() API shold be at 0x%p.\n", (PVOID)LdrLoadDll));
 		}
 
 		::RtlInitUnicodeString(&routineName, L"KeAlertThread");
@@ -621,10 +621,12 @@ PVOID GetNtdllRoutineAddress(_In_ const PCHAR apiName)
 	do
 	{
 		NTSTATUS ntstatus;
+		BOOLEAN bProcessAttached = FALSE;
 		PVOID pNtdll = nullptr;
 		PVOID pSectionBase = nullptr;
 		PEPROCESS pSystem = nullptr;
 		SIZE_T nViewSize = NULL;
+		KAPC_STATE apcState{ 0 };
 		SIZE_T nInfoLength = sizeof(SECTION_IMAGE_INFORMATION);
 		SECTION_IMAGE_INFORMATION sectionImageInfo{ 0 };
 		CLIENT_ID clientId { ULongToHandle(4u), nullptr };
@@ -713,8 +715,8 @@ PVOID GetNtdllRoutineAddress(_In_ const PCHAR apiName)
 
 		__try
 		{
-			KAPC_STATE apcState{ 0 };
 			::KeStackAttachProcess(pSystem, &apcState);
+			bProcessAttached = TRUE;
 
 			if (*(USHORT*)pSectionBase == 0x5A4D)
 			{
@@ -746,6 +748,9 @@ PVOID GetNtdllRoutineAddress(_In_ const PCHAR apiName)
 		{
 			KdPrint((DRIVER_PREFIX "Access violation in user space.\n"));
 			ntstatus = STATUS_ACCESS_VIOLATION;
+
+			if (bProcessAttached)
+				::KeUnstackDetachProcess(&apcState);
 		}
 
 		ObDereferenceObject(pSystem);
