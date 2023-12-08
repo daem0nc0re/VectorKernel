@@ -105,11 +105,11 @@ typedef struct _IMAGE_NT_HEADERS64 {
 typedef struct _IMAGE_EXPORT_DIRECTORY
 {
 	ULONG Characteristics;
-    ULONG TimeDateStamp;
-    USHORT MajorVersion;
-    USHORT MinorVersion;
-    ULONG Name;
-    ULONG Base;
+	ULONG TimeDateStamp;
+	USHORT MajorVersion;
+	USHORT MinorVersion;
+	ULONG Name;
+	ULONG Base;
 	ULONG NumberOfFunctions;
 	ULONG NumberOfNames;
 	ULONG AddressOfFunctions;
