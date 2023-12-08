@@ -747,7 +747,6 @@ PVOID GetNtdllRoutineAddress(_In_ const PCHAR apiName)
 		__except (EXCEPTION_EXECUTE_HANDLER)
 		{
 			KdPrint((DRIVER_PREFIX "Access violation in user space.\n"));
-			ntstatus = STATUS_ACCESS_VIOLATION;
 
 			if (bProcessAttached)
 				::KeUnstackDetachProcess(&apcState);
