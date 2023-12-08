@@ -20,7 +20,7 @@ typedef struct _INJECT_CONTEXT
 {
 	ULONG ThreadId;
 	WCHAR LibraryPath[256];
-} INJECT_CONTEXT, *PINJECT_CONTEXT;
+} INJECT_CONTEXT, * PINJECT_CONTEXT;
 
 //
 // Windows definition
@@ -71,7 +71,7 @@ typedef struct _SECTION_IMAGE_INFORMATION
 	ULONG LoaderFlags;
 	ULONG ImageFileSize;
 	ULONG CheckSum;
-} SECTION_IMAGE_INFORMATION, *PSECTION_IMAGE_INFORMATION;
+} SECTION_IMAGE_INFORMATION, * PSECTION_IMAGE_INFORMATION;
 
 //
 // enum definition
@@ -103,35 +103,35 @@ typedef NTSTATUS(NTAPI* PZwQuerySection)(
 	_Out_writes_bytes_(SectionInformationLength) PVOID SectionInformation,
 	_In_ SIZE_T SectionInformationLength,
 	_Out_opt_ PSIZE_T ReturnLength
-);
-typedef VOID (NTAPI *PKNORMAL_ROUTINE)(
+	);
+typedef VOID(NTAPI* PKNORMAL_ROUTINE)(
 	_In_opt_ PVOID NormalContext,
 	_In_opt_ PVOID SystemArgument1,
 	_In_opt_ PVOID SystemArgument2
-);
-typedef VOID (NTAPI *PKKERNEL_ROUTINE)(
-	_In_ PKAPC *Apc,
-	_Inout_ PKNORMAL_ROUTINE *NormalRoutine,
-	_Inout_ PVOID *NormalContext,
-	_Inout_ PVOID *SystemArgument1,
-	_Inout_ PVOID *SystemArgument2
-);
-typedef VOID (NTAPI *PKRUNDOWN_ROUTINE)(_In_opt_ PKAPC Apc);
-typedef NTSTATUS (NTAPI *PLdrLoadDll)(
+	);
+typedef VOID(NTAPI* PKKERNEL_ROUTINE)(
+	_In_ PKAPC* Apc,
+	_Inout_ PKNORMAL_ROUTINE* NormalRoutine,
+	_Inout_ PVOID* NormalContext,
+	_Inout_ PVOID* SystemArgument1,
+	_Inout_ PVOID* SystemArgument2
+	);
+typedef VOID(NTAPI* PKRUNDOWN_ROUTINE)(_In_opt_ PKAPC Apc);
+typedef NTSTATUS(NTAPI* PLdrLoadDll)(
 	_In_opt_ PWSTR DllPath,
 	_In_opt_ PULONG DllCharacteristics,
 	_In_ PUNICODE_STRING DllName,
-	_Out_ PVOID *DllHandle
-);
-typedef PVOID (NTAPI *PRtlFindExportedRoutineByName)(
+	_Out_ PVOID* DllHandle
+	);
+typedef PVOID(NTAPI* PRtlFindExportedRoutineByName)(
 	_In_ PVOID ImageBase,
 	_In_ PCHAR RoutineName
-);
-typedef BOOLEAN (NTAPI *PKeAlertThread)(
+	);
+typedef BOOLEAN(NTAPI* PKeAlertThread)(
 	_In_ PKTHREAD Thread,
 	_In_ KPROCESSOR_MODE AlertMode
-);
-typedef VOID (NTAPI *PKeInitializeApc)(
+	);
+typedef VOID(NTAPI* PKeInitializeApc)(
 	_Out_ PKAPC Apc,
 	_In_ PKTHREAD Thread,
 	_In_ KAPC_ENVIRONMENT Environment,
@@ -140,13 +140,13 @@ typedef VOID (NTAPI *PKeInitializeApc)(
 	_In_opt_ PKNORMAL_ROUTINE NormalRoutine,
 	_In_opt_ KPROCESSOR_MODE ProcessorMode,
 	_In_opt_ PVOID NormalContext
-);
-typedef BOOLEAN (NTAPI *PKeInsertQueueApc)(
+	);
+typedef BOOLEAN(NTAPI* PKeInsertQueueApc)(
 	_In_ PKAPC Apc,
 	_In_opt_ PVOID SystemArgument1,
 	_In_opt_ PVOID SystemArgument2,
 	_In_ KPRIORITY Increment
-);
+	);
 
 //
 // API address storage
@@ -342,14 +342,12 @@ NTSTATUS OnDeviceControl(
 	PIO_STACK_LOCATION irpSp = ::IoGetCurrentIrpStackLocation(Irp);
 	auto& dic = irpSp->Parameters.DeviceIoControl;
 	ULONG_PTR info = NULL;
-	PINJECT_CONTEXT pContext = nullptr;
 	PETHREAD pThread = nullptr;
 	PVOID pPathBuffer = nullptr;
 	PKAPC pKapc = nullptr;
 	HANDLE hProcess = nullptr;
-	UCHAR pUnicodeStringStorage[0x220]{ 0 }; // sufficient to store packed _UNICODE_STRING with null-terminator
-	PVOID pUnicodeStringBuffer = (PVOID)((ULONG_PTR)pUnicodeStringStorage + sizeof(UNICODE_STRING));
-	SIZE_T nBufferSize = 0x220u;
+	struct : UNICODE_STRING { WCHAR buf[256]; } packedUnicodeString{ };
+	SIZE_T nBufferSize = sizeof(UNICODE_STRING) + (sizeof(WCHAR) * 256);
 	BOOLEAN bProcessAttached = FALSE;
 	KAPC_STATE apcState{ 0 };
 	CLIENT_ID clientId{ 0 };
@@ -366,9 +364,8 @@ NTSTATUS OnDeviceControl(
 			break;
 		}
 
-		pContext = (PINJECT_CONTEXT)Irp->AssociatedIrp.SystemBuffer;
-		// pKapc = (PKAPC)::ExAllocatePool2(POOL_FLAG_NON_PAGED, sizeof(KAPC), (ULONG)DRIVER_TAG);
-		pKapc = (PKAPC)::ExAllocatePoolWithTag(NonPagedPool, sizeof(KAPC), (ULONG)DRIVER_TAG);
+		pKapc = (PKAPC)::ExAllocatePool2(POOL_FLAG_NON_PAGED, sizeof(KAPC), (ULONG)DRIVER_TAG);
+		// pKapc = (PKAPC)::ExAllocatePoolWithTag(NonPagedPool, sizeof(KAPC), (ULONG)DRIVER_TAG);
 
 		if (pKapc == nullptr)
 		{
@@ -402,19 +399,23 @@ NTSTATUS OnDeviceControl(
 			KdPrint((DRIVER_PREFIX "LdrLoadDll() is at 0x%p.\n", (PVOID)LdrLoadDll));
 		}
 
-		ntstatus = ::PsLookupThreadByThreadId(ULongToHandle(pContext->ThreadId), &pThread);
-		
+		ntstatus = ::PsLookupThreadByThreadId(
+			ULongToHandle(((PINJECT_CONTEXT)Irp->AssociatedIrp.SystemBuffer)->ThreadId),
+			&pThread);
+
 		if (!NT_SUCCESS(ntstatus))
 		{
 			pThread = nullptr;
 			KdPrint((DRIVER_PREFIX "Failed to lookup nt!_ETHREAD for thread ID %u (NTSTATUS = 0x%08X).\n",
-				pContext->ThreadId,
+				((PINJECT_CONTEXT)Irp->AssociatedIrp.SystemBuffer)->ThreadId,
 				ntstatus));
 			break;
 		}
 		else
 		{
-			KdPrint((DRIVER_PREFIX "nt!_ETHREAD for thread ID %u is at 0x%p.\n", pContext->ThreadId, pThread));
+			KdPrint((DRIVER_PREFIX "nt!_ETHREAD for thread ID %u is at 0x%p.\n",
+				((PINJECT_CONTEXT)Irp->AssociatedIrp.SystemBuffer)->ThreadId,
+				pThread));
 		}
 
 		clientId.UniqueProcess = ::PsGetThreadProcessId(pThread);
@@ -458,13 +459,18 @@ NTSTATUS OnDeviceControl(
 			HandleToULong(clientId.UniqueProcess)));
 
 		// Build packed _UNICODE_STRING data in kernel space before writing it in user space
-		::memset((PVOID)pUnicodeStringStorage, 0, 0x220);
-		((PUNICODE_STRING)pUnicodeStringStorage)->MaximumLength = (USHORT)(sizeof(WCHAR) * 256);
-		((PUNICODE_STRING)pUnicodeStringStorage)->Buffer = (PWCH)((ULONG_PTR)pPathBuffer + sizeof(UNICODE_STRING));
-		::memcpy(pUnicodeStringBuffer, &pContext->LibraryPath, sizeof(WCHAR) * 256);
-		((PUNICODE_STRING)pUnicodeStringStorage)->Length = (USHORT)(sizeof(WCHAR) * ::wcslen((PWCHAR)pUnicodeStringBuffer));
+		packedUnicodeString.Length = 0u;
+		packedUnicodeString.MaximumLength = (USHORT)(sizeof(WCHAR) * 256);
+		packedUnicodeString.Buffer = (PWCH)((ULONG_PTR)pPathBuffer + sizeof(UNICODE_STRING));
+		::memcpy(&packedUnicodeString.buf, &((PINJECT_CONTEXT)Irp->AssociatedIrp.SystemBuffer)->LibraryPath, sizeof(WCHAR) * 256);
 
-		KdPrint((DRIVER_PREFIX "Library to inject: %ws.\n", (PWCHAR)pUnicodeStringBuffer));
+		for (auto idx = 0; idx < 256; idx++)
+		{
+			if (packedUnicodeString.buf[idx] == 0u)
+				break;
+			else
+				packedUnicodeString.Length += sizeof(WCHAR);
+		}
 
 		__try
 		{
@@ -472,7 +478,8 @@ NTSTATUS OnDeviceControl(
 			::KeStackAttachProcess(::PsGetThreadProcess(pThread), &apcState);
 			bProcessAttached = TRUE;
 
-			::memcpy(pPathBuffer, pUnicodeStringStorage, 0x220);
+			::memcpy(pPathBuffer, &packedUnicodeString, sizeof(UNICODE_STRING) + (sizeof(WCHAR) * 256));
+			KdPrint((DRIVER_PREFIX "Library to inject: %wZ.\n", (PUNICODE_STRING)pPathBuffer));
 
 			::KeUnstackDetachProcess(&apcState);
 			bProcessAttached = FALSE;
@@ -519,7 +526,10 @@ NTSTATUS OnDeviceControl(
 	if (hProcess != nullptr)
 	{
 		if (!NT_SUCCESS(ntstatus) && (pPathBuffer != nullptr))
+		{
+			nBufferSize = NULL;
 			::ZwFreeVirtualMemory(hProcess, &pPathBuffer, &nBufferSize, MEM_RELEASE);
+		}
 
 		::ZwClose(hProcess);
 	}
