@@ -20,7 +20,7 @@ typedef struct _INJECT_CONTEXT
 {
 	ULONG ThreadId;
 	WCHAR LibraryPath[256];
-} INJECT_CONTEXT, * PINJECT_CONTEXT;
+} INJECT_CONTEXT, *PINJECT_CONTEXT;
 
 //
 // Windows definition
@@ -71,7 +71,7 @@ typedef struct _SECTION_IMAGE_INFORMATION
 	ULONG LoaderFlags;
 	ULONG ImageFileSize;
 	ULONG CheckSum;
-} SECTION_IMAGE_INFORMATION, * PSECTION_IMAGE_INFORMATION;
+} SECTION_IMAGE_INFORMATION, *PSECTION_IMAGE_INFORMATION;
 
 //
 // enum definition
@@ -92,46 +92,46 @@ typedef enum _KAPC_ENVIRONMENT
 	AttachedApcEnvironment,
 	CurrentApcEnvironment,
 	InsertApcEnvironment
-} KAPC_ENVIRONMENT, * PKAPC_ENVIRONMENT;
+} KAPC_ENVIRONMENT, *PKAPC_ENVIRONMENT;
 
 //
 // Function type definition
 //
-typedef NTSTATUS(NTAPI* PZwQuerySection)(
+typedef NTSTATUS(NTAPI *PZwQuerySection)(
 	_In_ HANDLE SectionHandle,
 	_In_ SECTION_INFORMATION_CLASS SectionInformationClass,
 	_Out_writes_bytes_(SectionInformationLength) PVOID SectionInformation,
 	_In_ SIZE_T SectionInformationLength,
 	_Out_opt_ PSIZE_T ReturnLength
-	);
-typedef VOID(NTAPI* PKNORMAL_ROUTINE)(
+);
+typedef VOID(NTAPI *PKNORMAL_ROUTINE)(
 	_In_opt_ PVOID NormalContext,
 	_In_opt_ PVOID SystemArgument1,
 	_In_opt_ PVOID SystemArgument2
-	);
-typedef VOID(NTAPI* PKKERNEL_ROUTINE)(
-	_In_ PKAPC* Apc,
-	_Inout_ PKNORMAL_ROUTINE* NormalRoutine,
-	_Inout_ PVOID* NormalContext,
-	_Inout_ PVOID* SystemArgument1,
-	_Inout_ PVOID* SystemArgument2
-	);
-typedef VOID(NTAPI* PKRUNDOWN_ROUTINE)(_In_opt_ PKAPC Apc);
+);
+typedef VOID(NTAPI *PKKERNEL_ROUTINE)(
+	_In_ PKAPC *Apc,
+	_Inout_ PKNORMAL_ROUTINE *NormalRoutine,
+	_Inout_ PVOID *NormalContext,
+	_Inout_ PVOID *SystemArgument1,
+	_Inout_ PVOID *SystemArgument2
+);
+typedef VOID(NTAPI *PKRUNDOWN_ROUTINE)(_In_opt_ PKAPC Apc);
 typedef NTSTATUS(NTAPI* PLdrLoadDll)(
 	_In_opt_ PWSTR DllPath,
 	_In_opt_ PULONG DllCharacteristics,
 	_In_ PUNICODE_STRING DllName,
-	_Out_ PVOID* DllHandle
-	);
-typedef PVOID(NTAPI* PRtlFindExportedRoutineByName)(
+	_Out_ PHANDLE DllHandle
+);
+typedef PVOID(NTAPI *PRtlFindExportedRoutineByName)(
 	_In_ PVOID ImageBase,
 	_In_ PCHAR RoutineName
-	);
-typedef BOOLEAN(NTAPI* PKeAlertThread)(
+);
+typedef BOOLEAN(NTAPI *PKeAlertThread)(
 	_In_ PKTHREAD Thread,
 	_In_ KPROCESSOR_MODE AlertMode
-	);
-typedef VOID(NTAPI* PKeInitializeApc)(
+);
+typedef VOID(NTAPI *PKeInitializeApc)(
 	_Out_ PKAPC Apc,
 	_In_ PKTHREAD Thread,
 	_In_ KAPC_ENVIRONMENT Environment,
@@ -140,13 +140,13 @@ typedef VOID(NTAPI* PKeInitializeApc)(
 	_In_opt_ PKNORMAL_ROUTINE NormalRoutine,
 	_In_opt_ KPROCESSOR_MODE ProcessorMode,
 	_In_opt_ PVOID NormalContext
-	);
-typedef BOOLEAN(NTAPI* PKeInsertQueueApc)(
+);
+typedef BOOLEAN(NTAPI *PKeInsertQueueApc)(
 	_In_ PKAPC Apc,
 	_In_opt_ PVOID SystemArgument1,
 	_In_opt_ PVOID SystemArgument2,
 	_In_ KPRIORITY Increment
-	);
+);
 
 //
 // API address storage
@@ -173,11 +173,12 @@ NTSTATUS OnDeviceControl(
 PVOID GetNtdllBase();
 PVOID GetProcAddressFromKernel(_In_ PVOID pLibrary, _In_ PCHAR procName);
 VOID NTAPI ApcRoutine(
-	_In_ PKAPC* Apc,
+	_In_ PKAPC *Apc,
 	_Inout_ PKNORMAL_ROUTINE* NormalRoutine,
 	_Inout_ PVOID* NormalContext,
 	_Inout_ PVOID* SystemArgument1,
-	_Inout_ PVOID* SystemArgument2);
+	_Inout_ PVOID* SystemArgument2
+);
 
 //
 // Driver routines
