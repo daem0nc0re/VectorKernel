@@ -25,6 +25,98 @@ typedef struct _INJECT_CONTEXT
 //
 // Windows definition
 //
+typedef struct _IMAGE_DOS_HEADER
+{
+	USHORT e_magic;
+	USHORT e_cblp;
+	USHORT e_cp;
+	USHORT e_crlc;
+	USHORT e_cparhdr;
+	USHORT e_minalloc;
+	USHORT e_maxalloc;
+	USHORT e_ss;
+	USHORT e_sp;
+	USHORT e_csum;
+	USHORT e_ip;
+	USHORT e_cs;
+	USHORT e_lfarlc;
+	USHORT e_ovno;
+	USHORT e_res[4];
+	USHORT e_oemid;
+	USHORT e_oeminfo;
+	USHORT e_res2[10];
+	LONG e_lfanew;
+} IMAGE_DOS_HEADER, *PIMAGE_DOS_HEADER;
+
+typedef struct _IMAGE_FILE_HEADER {
+	SHORT Machine;
+	SHORT NumberOfSections;
+	LONG TimeDateStamp;
+	LONG PointerToSymbolTable;
+	LONG NumberOfSymbols;
+	SHORT SizeOfOptionalHeader;
+	SHORT Characteristics;
+} IMAGE_FILE_HEADER, *PIMAGE_FILE_HEADER;
+
+typedef struct _IMAGE_DATA_DIRECTORY {
+	LONG VirtualAddress;
+	LONG Size;
+} IMAGE_DATA_DIRECTORY, *PIMAGE_DATA_DIRECTORY;
+
+typedef struct _IMAGE_OPTIONAL_HEADER64 {
+	SHORT Magic;
+	UCHAR MajorLinkerVersion;
+	UCHAR MinorLinkerVersion;
+	LONG SizeOfCode;
+	LONG SizeOfInitializedData;
+	LONG SizeOfUninitializedData;
+	LONG AddressOfEntryPoint;
+	LONG BaseOfCode;
+	ULONG64 ImageBase;
+	LONG SectionAlignment;
+	LONG FileAlignment;
+	SHORT MajorOperatingSystemVersion;
+	SHORT MinorOperatingSystemVersion;
+	SHORT MajorImageVersion;
+	SHORT MinorImageVersion;
+	SHORT MajorSubsystemVersion;
+	SHORT MinorSubsystemVersion;
+	LONG Win32VersionValue;
+	LONG SizeOfImage;
+	LONG SizeOfHeaders;
+	LONG CheckSum;
+	SHORT Subsystem;
+	SHORT DllCharacteristics;
+	ULONG64 SizeOfStackReserve;
+	ULONG64 SizeOfStackCommit;
+	ULONG64 SizeOfHeapReserve;
+	ULONG64 SizeOfHeapCommit;
+	LONG LoaderFlags;
+	LONG NumberOfRvaAndSizes;
+	IMAGE_DATA_DIRECTORY DataDirectory[16];
+} IMAGE_OPTIONAL_HEADER, *PIMAGE_OPTIONAL_HEADER;
+
+typedef struct _IMAGE_NT_HEADERS64 {
+	LONG Signature;
+	IMAGE_FILE_HEADER FileHeader;
+	IMAGE_OPTIONAL_HEADER OptionalHeader;
+} IMAGE_NT_HEADERS, *PIMAGE_NT_HEADERS;
+
+typedef struct _IMAGE_EXPORT_DIRECTORY
+{
+	ULONG Characteristics;
+    ULONG TimeDateStamp;
+    USHORT MajorVersion;
+    USHORT MinorVersion;
+    ULONG Name;
+    ULONG Base;
+	ULONG NumberOfFunctions;
+	ULONG NumberOfNames;
+	ULONG AddressOfFunctions;
+	ULONG AddressOfNames;
+	ULONG AddressOfNameOrdinals;
+} IMAGE_EXPORT_DIRECTORY, *PIMAGE_EXPORT_DIRECTORY;
+
 typedef struct _SECTION_IMAGE_INFORMATION
 {
 	PVOID TransferAddress;
@@ -123,10 +215,6 @@ typedef NTSTATUS(NTAPI* PLdrLoadDll)(
 	_In_ PUNICODE_STRING DllName,
 	_Out_ PHANDLE DllHandle
 );
-typedef PVOID(NTAPI *PRtlFindExportedRoutineByName)(
-	_In_ PVOID ImageBase,
-	_In_ PCHAR RoutineName
-);
 typedef BOOLEAN(NTAPI *PKeAlertThread)(
 	_In_ PKTHREAD Thread,
 	_In_ KPROCESSOR_MODE AlertMode
@@ -153,7 +241,6 @@ typedef BOOLEAN(NTAPI *PKeInsertQueueApc)(
 //
 PLdrLoadDll LdrLoadDll = nullptr;
 PZwQuerySection ZwQuerySection = nullptr;
-PRtlFindExportedRoutineByName RtlFindExportedRoutineByName = nullptr;
 PKeAlertThread KeAlertThread = nullptr;
 PKeInitializeApc KeInitializeApc = nullptr;
 PKeInsertQueueApc KeInsertQueueApc = nullptr;
@@ -170,8 +257,7 @@ NTSTATUS OnDeviceControl(
 	_Inout_ PDEVICE_OBJECT DeviceObject,
 	_Inout_ PIRP Irp
 );
-PVOID GetNtdllBase();
-PVOID GetProcAddressFromKernel(_In_ PVOID pLibrary, _In_ PCHAR procName);
+PVOID GetNtdllRoutineAddress(_In_ const PCHAR apiName);
 VOID NTAPI ApcRoutine(
 	_In_ PKAPC *Apc,
 	_Inout_ PKNORMAL_ROUTINE* NormalRoutine,
@@ -217,17 +303,16 @@ NTSTATUS DriverEntry(
 			KdPrint((DRIVER_PREFIX "%wZ() API is at 0x%p.\n", routineName, (PVOID)ZwQuerySection));
 		}
 
-		::RtlInitUnicodeString(&routineName, L"RtlFindExportedRoutineByName");
-		RtlFindExportedRoutineByName = (PRtlFindExportedRoutineByName)::MmGetSystemRoutineAddress(&routineName);
+		LdrLoadDll = (PLdrLoadDll)GetNtdllRoutineAddress(const_cast<PCHAR>("LdrLoadDll"));
 
-		if (RtlFindExportedRoutineByName == nullptr)
+		if (LdrLoadDll == nullptr)
 		{
-			KdPrint((DRIVER_PREFIX "Failed to resolve %wZ() API.\n", routineName));
+			KdPrint((DRIVER_PREFIX "Failed to resolve LdrLoadDll() API.\n"));
 			break;
 		}
 		else
 		{
-			KdPrint((DRIVER_PREFIX "%wZ() API is at 0x%p.\n", routineName, (PVOID)RtlFindExportedRoutineByName));
+			KdPrint((DRIVER_PREFIX "LdrLoadDll() API is at 0x%p.\n", (PVOID)LdrLoadDll));
 		}
 
 		::RtlInitUnicodeString(&routineName, L"KeAlertThread");
@@ -376,28 +461,6 @@ NTSTATUS OnDeviceControl(
 		else
 		{
 			KdPrint((DRIVER_PREFIX "Non-paged pool for _KAPC is allocated at 0x%p.\n", pKapc));
-		}
-
-		if (LdrLoadDll == nullptr)
-		{
-			PVOID pNtdll = GetNtdllBase();
-
-			if (pNtdll == nullptr)
-				break;
-
-			KdPrint((DRIVER_PREFIX "ntdll.dll should be at 0x%p.\n", pNtdll));
-
-			LdrLoadDll = (PLdrLoadDll)GetProcAddressFromKernel(pNtdll, "LdrLoadDll");
-		}
-
-		if (LdrLoadDll == nullptr)
-		{
-			KdPrint((DRIVER_PREFIX "Failed to get LdrLoadDll() address.\n"));
-			break;
-		}
-		else
-		{
-			KdPrint((DRIVER_PREFIX "LdrLoadDll() is at 0x%p.\n", (PVOID)LdrLoadDll));
 		}
 
 		ntstatus = ::PsLookupThreadByThreadId(
@@ -549,59 +612,165 @@ NTSTATUS OnDeviceControl(
 //
 // Helper functions
 //
-PVOID GetNtdllBase()
+PVOID GetNtdllRoutineAddress(_In_ const PCHAR apiName)
 {
-	NTSTATUS ntstatus;
-	PVOID pNtdll = nullptr;
 	HANDLE hSection = nullptr;
-	UNICODE_STRING objectPath = RTL_CONSTANT_STRING(L"\\KnownDlls\\ntdll.dll");
-	OBJECT_ATTRIBUTES objectAttributes{ 0 };
-	SIZE_T nInfoLength = sizeof(SECTION_IMAGE_INFORMATION);
-	SECTION_IMAGE_INFORMATION sectionImageInfo{ 0 };
+	HANDLE hSystem = nullptr;
+	PVOID pRoutine = nullptr;
 
-	InitializeObjectAttributes(
-		&objectAttributes,
-		&objectPath,
-		OBJ_CASE_INSENSITIVE | OBJ_KERNEL_HANDLE,
-		nullptr,
-		nullptr);
-	ntstatus = ::ZwOpenSection(&hSection, SECTION_QUERY, &objectAttributes);
-
-	if (NT_SUCCESS(ntstatus))
+	do
 	{
+		NTSTATUS ntstatus;
+		PVOID pNtdll = nullptr;
+		PVOID pSectionBase = nullptr;
+		PEPROCESS pSystem = nullptr;
+		SIZE_T nViewSize = NULL;
+		SIZE_T nInfoLength = sizeof(SECTION_IMAGE_INFORMATION);
+		SECTION_IMAGE_INFORMATION sectionImageInfo{ 0 };
+		CLIENT_ID clientId { ULongToHandle(4u), nullptr };
+		UNICODE_STRING objectPath = RTL_CONSTANT_STRING(L"\\KnownDlls\\ntdll.dll");
+		OBJECT_ATTRIBUTES objectAttributes{ 0 };
+		InitializeObjectAttributes(
+			&objectAttributes,
+			&objectPath,
+			OBJ_CASE_INSENSITIVE | OBJ_KERNEL_HANDLE,
+			nullptr,
+			nullptr);
+
+		//
+		// Get user space address for ntdll.dll from KnownDlls section
+		//
+		ntstatus = ::ZwOpenSection(&hSection, SECTION_QUERY | SECTION_MAP_READ, &objectAttributes);
+
+		if (!NT_SUCCESS(ntstatus))
+		{
+			hSection = nullptr;
+			KdPrint((DRIVER_PREFIX "Failed to ZwOpenSection() (NTSTATUS = 0x%08X).\n", ntstatus));
+			break;
+		}
+
 		ntstatus = ZwQuerySection(
 			hSection,
 			SectionImageInformation,
 			&sectionImageInfo,
 			nInfoLength,
 			&nInfoLength);
+
+		if (!NT_SUCCESS(ntstatus))
+		{
+			KdPrint((DRIVER_PREFIX "Failed to ZwQuerySection() (NTSTATUS = 0x%08X).\n", ntstatus));
+			break;
+		}
+		else
+		{
+			pNtdll = sectionImageInfo.TransferAddress;
+			KdPrint((DRIVER_PREFIX "ntdll.dll should be at 0x%p.\n", pNtdll));
+		}
+
+		//
+		// Get routine address by PE analyzing from mapped \KnownDlls\ntdll.dll in System process
+		//
+		::memset(&objectAttributes, 0, sizeof(OBJECT_ATTRIBUTES));
+		objectAttributes.Length = sizeof(OBJECT_ATTRIBUTES);
+		objectAttributes.Attributes = OBJ_KERNEL_HANDLE;
+
+		ntstatus = ::ZwOpenProcess(&hSystem, PROCESS_ALL_ACCESS, &objectAttributes, &clientId);
+
+		if (!NT_SUCCESS(ntstatus))
+		{
+			hSystem = nullptr;
+			KdPrint((DRIVER_PREFIX "Failed to ZwOpenProcess() for System (NTSTATUS = 0x%08X).\n", ntstatus));
+			break;
+		}
+		else
+		{
+			KdPrint((DRIVER_PREFIX "Got System process handle 0x%p.\n", hSystem));
+		}
+
+		ntstatus = ::ZwMapViewOfSection(
+			hSection,
+			hSystem,
+			&pSectionBase,
+			0u,
+			0u,
+			nullptr,
+			&nViewSize,
+			ViewUnmap,
+			NULL,
+			PAGE_READWRITE);
+
+		if (!NT_SUCCESS(ntstatus) && (ntstatus != STATUS_IMAGE_NOT_AT_BASE))
+		{
+			KdPrint((DRIVER_PREFIX "Failed to ZwMapViewOfSection() for System (NTSTATUS = 0x%08X).\n", ntstatus));
+			break;
+		}
+		else
+		{
+			KdPrint((DRIVER_PREFIX "ntdll.dll section is mapped at 0x%p in System.\n", pSectionBase));
+		}
+
+		::PsLookupProcessByProcessId(ULongToHandle(4u), &pSystem);
+
+		__try
+		{
+			KAPC_STATE apcState{ 0 };
+			::KeStackAttachProcess(pSystem, &apcState);
+
+			if (*(USHORT*)pSectionBase == 0x5A4D)
+			{
+				auto e_lfanew = ((PIMAGE_DOS_HEADER)pSectionBase)->e_lfanew;
+				auto pImageNtHeader = (PIMAGE_NT_HEADERS)((ULONG_PTR)pSectionBase + e_lfanew);
+				auto nExportDirectoryOffset = pImageNtHeader->OptionalHeader.DataDirectory[0].VirtualAddress;
+				auto pExportDirectory = (PIMAGE_EXPORT_DIRECTORY)((ULONG_PTR)pSectionBase + nExportDirectoryOffset);
+				auto pOrdinals = (USHORT*)((ULONG_PTR)pSectionBase + pExportDirectory->AddressOfNameOrdinals);
+				auto pNames = (ULONG*)((ULONG_PTR)pSectionBase + pExportDirectory->AddressOfNames);
+				auto pFunctions = (ULONG*)((ULONG_PTR)pSectionBase + pExportDirectory->AddressOfFunctions);
+				auto nEntries = pExportDirectory->NumberOfNames;
+
+				for (auto idx = 0u; idx < nEntries; idx++)
+				{
+					auto functionName = (PCHAR)((ULONG_PTR)pSectionBase + pNames[idx]);
+					auto nStrLen = ::strlen(functionName);
+
+					if (::_strnicmp(functionName, apiName, nStrLen) == 0)
+					{
+						pRoutine = (PVOID)((ULONG_PTR)pNtdll + pFunctions[pOrdinals[idx]]);
+						break;
+					}
+				}
+			}
+
+			::KeUnstackDetachProcess(&apcState);
+		}
+		__except (EXCEPTION_EXECUTE_HANDLER)
+		{
+			KdPrint((DRIVER_PREFIX "Access violation in user space.\n"));
+			ntstatus = STATUS_ACCESS_VIOLATION;
+		}
+
+		ObDereferenceObject(pSystem);
+
+		ntstatus = ::ZwUnmapViewOfSection(hSystem, pSectionBase);
+
+		if (!NT_SUCCESS(ntstatus))
+		{
+			hSystem = nullptr;
+			KdPrint((DRIVER_PREFIX "Failed to ZwUnmapViewOfSection() for System (NTSTATUS = 0x%08X).\n", ntstatus));
+			break;
+		}
+		else
+		{
+			KdPrint((DRIVER_PREFIX "ntdll.dll section is unmapped from System.\n"));
+		}
+	} while (false);
+
+	if (hSystem != nullptr)
+		::ZwClose(hSystem);
+
+	if (hSection != nullptr)
 		::ZwClose(hSection);
 
-		if (NT_SUCCESS(ntstatus))
-			pNtdll = sectionImageInfo.TransferAddress;
-	}
-
-	return pNtdll;
-}
-
-
-PVOID GetProcAddressFromKernel(_In_ PVOID pLibrary, _In_ PCHAR procName)
-{
-	PVOID pProcedure = nullptr;
-
-	if (pLibrary == nullptr)
-		return nullptr;
-
-	__try
-	{
-		pProcedure = ::RtlFindExportedRoutineByName(pLibrary, procName);
-	}
-	__except (EXCEPTION_EXECUTE_HANDLER)
-	{
-		pProcedure = nullptr;
-	}
-
-	return pProcedure;
+	return pRoutine;
 }
 
 

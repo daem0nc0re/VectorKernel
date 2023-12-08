@@ -1,6 +1,6 @@
 # VectorKernel
 
-PoCs for Kernel-mode rootkit techniques research or education.
+PoCs for Kernelmode rootkit techniques research or education.
 Currently focusing on Windows OS.
 All modules support 64bit OS only.
 
