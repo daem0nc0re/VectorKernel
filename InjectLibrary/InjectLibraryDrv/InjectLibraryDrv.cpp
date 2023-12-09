@@ -312,7 +312,7 @@ NTSTATUS DriverEntry(
 		}
 		else
 		{
-			KdPrint((DRIVER_PREFIX "LdrLoadDll() API shold be at 0x%p.\n", (PVOID)LdrLoadDll));
+			KdPrint((DRIVER_PREFIX "LdrLoadDll() API should be at 0x%p.\n", (PVOID)LdrLoadDll));
 		}
 
 		::RtlInitUnicodeString(&routineName, L"KeAlertThread");
