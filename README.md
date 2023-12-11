@@ -19,6 +19,7 @@ All modules are tested in Windows 11.
 | Module Name | Description |
 | :--- | :--- |
 | [BlockNewProc](./BlockNewProc/) | PoCs to block new process with Process Notify Callback method. |
+| [CreateToken](./CreateToken/) | PoCs to get full privileged SYSTEM token with `ZwCreateToken()` API. |
 | [GetFullPrivs](./GetFullPrivs/) | PoCs to get full privileges with DKOM method. |
 | [GetProcHandle](./GetProcHandle/) | PoCs to get full access process handle from kernelmode. |
 | [InjectLibrary](./InjectLibrary/) | PoCs to perform DLL injection with Kernel APC Injection method. |
