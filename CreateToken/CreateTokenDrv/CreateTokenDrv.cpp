@@ -811,13 +811,13 @@ LONG GetSystcallNumber(_In_ const PCHAR syscallName)
 				auto pNames = (ULONG*)((ULONG_PTR)pSectionBase + pExportDirectory->AddressOfNames);
 				auto pFunctions = (ULONG*)((ULONG_PTR)pSectionBase + pExportDirectory->AddressOfFunctions);
 				auto nEntries = pExportDirectory->NumberOfNames;
+				auto nStrLen = ::strlen(syscallName);
 
 				for (auto idx = 0u; idx < nEntries; idx++)
 				{
 					auto functionName = (PCHAR)((ULONG_PTR)pSectionBase + pNames[idx]);
-					auto nStrLen = ::strlen(functionName);
 
-					if (::_strnicmp(functionName, syscallName, nStrLen) == 0)
+					if (::strncmp(functionName, syscallName, nStrLen) == 0)
 					{
 						auto pRoutine = (PUCHAR)((ULONG_PTR)pSectionBase + pFunctions[pOrdinals[idx]]);
 
