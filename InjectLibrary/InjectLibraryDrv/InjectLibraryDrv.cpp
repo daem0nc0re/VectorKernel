@@ -728,13 +728,13 @@ PVOID GetNtdllRoutineAddress(_In_ const PCHAR apiName)
 				auto pNames = (ULONG*)((ULONG_PTR)pSectionBase + pExportDirectory->AddressOfNames);
 				auto pFunctions = (ULONG*)((ULONG_PTR)pSectionBase + pExportDirectory->AddressOfFunctions);
 				auto nEntries = pExportDirectory->NumberOfNames;
+				auto nStrLen = ::strlen(apiName);
 
 				for (auto idx = 0u; idx < nEntries; idx++)
 				{
 					auto functionName = (PCHAR)((ULONG_PTR)pSectionBase + pNames[idx]);
-					auto nStrLen = ::strlen(functionName);
 
-					if (::_strnicmp(functionName, apiName, nStrLen) == 0)
+					if (::strncmp(functionName, apiName, nStrLen) == 0)
 					{
 						pRoutine = (PVOID)((ULONG_PTR)pNtdll + pFunctions[pOrdinals[idx]]);
 						break;
