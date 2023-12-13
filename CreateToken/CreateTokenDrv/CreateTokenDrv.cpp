@@ -349,7 +349,8 @@ typedef struct _IMAGE_DOS_HEADER
 	LONG e_lfanew;
 } IMAGE_DOS_HEADER, *PIMAGE_DOS_HEADER;
 
-typedef struct _IMAGE_FILE_HEADER {
+typedef struct _IMAGE_FILE_HEADER
+{
 	SHORT Machine;
 	SHORT NumberOfSections;
 	LONG TimeDateStamp;
@@ -359,12 +360,14 @@ typedef struct _IMAGE_FILE_HEADER {
 	SHORT Characteristics;
 } IMAGE_FILE_HEADER, *PIMAGE_FILE_HEADER;
 
-typedef struct _IMAGE_DATA_DIRECTORY {
+typedef struct _IMAGE_DATA_DIRECTORY
+{
 	LONG VirtualAddress;
 	LONG Size;
 } IMAGE_DATA_DIRECTORY, *PIMAGE_DATA_DIRECTORY;
 
-typedef struct _IMAGE_OPTIONAL_HEADER64 {
+typedef struct _IMAGE_OPTIONAL_HEADER64
+{
 	SHORT Magic;
 	UCHAR MajorLinkerVersion;
 	UCHAR MinorLinkerVersion;
@@ -397,7 +400,8 @@ typedef struct _IMAGE_OPTIONAL_HEADER64 {
 	IMAGE_DATA_DIRECTORY DataDirectory[16];
 } IMAGE_OPTIONAL_HEADER, *PIMAGE_OPTIONAL_HEADER;
 
-typedef struct _IMAGE_NT_HEADERS64 {
+typedef struct _IMAGE_NT_HEADERS64
+{
 	LONG Signature;
 	IMAGE_FILE_HEADER FileHeader;
 	IMAGE_OPTIONAL_HEADER OptionalHeader;
@@ -725,7 +729,6 @@ LONG GetSystcallNumber(_In_ const PCHAR syscallName)
 	do
 	{
 		NTSTATUS ntstatus;
-		BOOLEAN bProcessAttached = FALSE;
 		PVOID pSectionBase = nullptr;
 		PEPROCESS pSystem = nullptr;
 		SIZE_T nViewSize = NULL;
@@ -795,12 +798,10 @@ LONG GetSystcallNumber(_In_ const PCHAR syscallName)
 		}
 
 		::PsLookupProcessByProcessId(ULongToHandle(4u), &pSystem);
+		::KeStackAttachProcess(pSystem, &apcState);
 
 		__try
 		{
-			::KeStackAttachProcess(pSystem, &apcState);
-			bProcessAttached = TRUE;
-
 			if (*(USHORT*)pSectionBase == 0x5A4D)
 			{
 				auto e_lfanew = ((PIMAGE_DOS_HEADER)pSectionBase)->e_lfanew;
@@ -837,31 +838,21 @@ LONG GetSystcallNumber(_In_ const PCHAR syscallName)
 					}
 				}
 			}
-
-			::KeUnstackDetachProcess(&apcState);
 		}
 		__except (EXCEPTION_EXECUTE_HANDLER)
 		{
 			KdPrint((DRIVER_PREFIX "Access violation in user space.\n"));
-
-			if (bProcessAttached)
-				::KeUnstackDetachProcess(&apcState);
 		}
 
+		::KeUnstackDetachProcess(&apcState);
 		ObDereferenceObject(pSystem);
 
 		ntstatus = ::ZwUnmapViewOfSection(hSystem, pSectionBase);
 
 		if (!NT_SUCCESS(ntstatus))
-		{
-			hSystem = nullptr;
 			KdPrint((DRIVER_PREFIX "Failed to ZwUnmapViewOfSection() for System (NTSTATUS = 0x%08X).\n", ntstatus));
-			break;
-		}
 		else
-		{
 			KdPrint((DRIVER_PREFIX "ntdll.dll section is unmapped from System.\n"));
-		}
 	} while (false);
 
 	if (hSystem != nullptr)
