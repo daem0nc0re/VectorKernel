@@ -48,7 +48,8 @@ typedef struct _IMAGE_DOS_HEADER
 	LONG e_lfanew;
 } IMAGE_DOS_HEADER, *PIMAGE_DOS_HEADER;
 
-typedef struct _IMAGE_FILE_HEADER {
+typedef struct _IMAGE_FILE_HEADER
+{
 	SHORT Machine;
 	SHORT NumberOfSections;
 	LONG TimeDateStamp;
@@ -58,12 +59,14 @@ typedef struct _IMAGE_FILE_HEADER {
 	SHORT Characteristics;
 } IMAGE_FILE_HEADER, *PIMAGE_FILE_HEADER;
 
-typedef struct _IMAGE_DATA_DIRECTORY {
+typedef struct _IMAGE_DATA_DIRECTORY
+{
 	LONG VirtualAddress;
 	LONG Size;
 } IMAGE_DATA_DIRECTORY, *PIMAGE_DATA_DIRECTORY;
 
-typedef struct _IMAGE_OPTIONAL_HEADER64 {
+typedef struct _IMAGE_OPTIONAL_HEADER64
+{
 	SHORT Magic;
 	UCHAR MajorLinkerVersion;
 	UCHAR MinorLinkerVersion;
@@ -96,7 +99,8 @@ typedef struct _IMAGE_OPTIONAL_HEADER64 {
 	IMAGE_DATA_DIRECTORY DataDirectory[16];
 } IMAGE_OPTIONAL_HEADER, *PIMAGE_OPTIONAL_HEADER;
 
-typedef struct _IMAGE_NT_HEADERS64 {
+typedef struct _IMAGE_NT_HEADERS64
+{
 	LONG Signature;
 	IMAGE_FILE_HEADER FileHeader;
 	IMAGE_OPTIONAL_HEADER OptionalHeader;
@@ -738,9 +742,6 @@ PVOID GetNtdllRoutineAddress(_In_ const PCHAR apiName)
 		
 		::KeUnstackDetachProcess(&apcState);
 		ObDereferenceObject(pSystem);
-
-		if (pRoutine == nullptr)
-			break;
 
 		ntstatus = ::ZwUnmapViewOfSection(hSystem, pSectionBase);
 
