@@ -434,7 +434,6 @@ NTSTATUS OnDeviceControl(
 	HANDLE hProcess = nullptr;
 	struct : UNICODE_STRING { WCHAR buf[256]; } packedUnicodeString{ };
 	SIZE_T nBufferSize = sizeof(UNICODE_STRING) + (sizeof(WCHAR) * 256);
-	BOOLEAN bProcessAttached = FALSE;
 	KAPC_STATE apcState{ 0 };
 	CLIENT_ID clientId{ 0 };
 	OBJECT_ATTRIBUTES objectAttributes{ 0 };
@@ -536,32 +535,25 @@ NTSTATUS OnDeviceControl(
 				packedUnicodeString.Length += sizeof(WCHAR);
 		}
 
+		// Copy packed _UNICODE_STRING data to user space
+		::KeStackAttachProcess(::PsGetThreadProcess(pThread), &apcState);
+
 		__try
 		{
-			// Copy packed _UNICODE_STRING data to user space
-			::KeStackAttachProcess(::PsGetThreadProcess(pThread), &apcState);
-			bProcessAttached = TRUE;
-
 			::memcpy(pPathBuffer, &packedUnicodeString, sizeof(UNICODE_STRING) + (sizeof(WCHAR) * 256));
 			KdPrint((DRIVER_PREFIX "Library to inject: %wZ.\n", (PUNICODE_STRING)pPathBuffer));
-
-			::KeUnstackDetachProcess(&apcState);
-			bProcessAttached = FALSE;
+			ntstatus = STATUS_SUCCESS;
 		}
 		__except (EXCEPTION_EXECUTE_HANDLER)
 		{
 			KdPrint((DRIVER_PREFIX "Access violation in user space.\n"));
-
 			ntstatus = STATUS_ACCESS_VIOLATION;
-
-			if (bProcessAttached)
-			{
-				::KeUnstackDetachProcess(&apcState);
-				bProcessAttached = FALSE;
-			}
-
-			break;
 		}
+
+		::KeUnstackDetachProcess(&apcState);
+
+		if (!NT_SUCCESS(ntstatus))
+			break;
 
 		KeInitializeApc(
 			pKapc,
@@ -621,7 +613,6 @@ PVOID GetNtdllRoutineAddress(_In_ const PCHAR apiName)
 	do
 	{
 		NTSTATUS ntstatus;
-		BOOLEAN bProcessAttached = FALSE;
 		PVOID pNtdll = nullptr;
 		PVOID pSectionBase = nullptr;
 		PEPROCESS pSystem = nullptr;
@@ -712,12 +703,10 @@ PVOID GetNtdllRoutineAddress(_In_ const PCHAR apiName)
 		}
 
 		::PsLookupProcessByProcessId(ULongToHandle(4u), &pSystem);
+		::KeStackAttachProcess(pSystem, &apcState);
 
 		__try
 		{
-			::KeStackAttachProcess(pSystem, &apcState);
-			bProcessAttached = TRUE;
-
 			if (*(USHORT*)pSectionBase == 0x5A4D)
 			{
 				auto e_lfanew = ((PIMAGE_DOS_HEADER)pSectionBase)->e_lfanew;
@@ -741,31 +730,24 @@ PVOID GetNtdllRoutineAddress(_In_ const PCHAR apiName)
 					}
 				}
 			}
-
-			::KeUnstackDetachProcess(&apcState);
 		}
 		__except (EXCEPTION_EXECUTE_HANDLER)
 		{
 			KdPrint((DRIVER_PREFIX "Access violation in user space.\n"));
-
-			if (bProcessAttached)
-				::KeUnstackDetachProcess(&apcState);
 		}
-
+		
+		::KeUnstackDetachProcess(&apcState);
 		ObDereferenceObject(pSystem);
+
+		if (pRoutine == nullptr)
+			break;
 
 		ntstatus = ::ZwUnmapViewOfSection(hSystem, pSectionBase);
 
 		if (!NT_SUCCESS(ntstatus))
-		{
-			hSystem = nullptr;
 			KdPrint((DRIVER_PREFIX "Failed to ZwUnmapViewOfSection() for System (NTSTATUS = 0x%08X).\n", ntstatus));
-			break;
-		}
 		else
-		{
 			KdPrint((DRIVER_PREFIX "ntdll.dll section is unmapped from System.\n"));
-		}
 	} while (false);
 
 	if (hSystem != nullptr)
