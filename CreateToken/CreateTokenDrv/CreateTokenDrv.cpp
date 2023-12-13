@@ -900,7 +900,7 @@ PVOID GetZwCreateTokenBase()
 		auto pFunctionBase = (PUCHAR)((ULONG_PTR)pKernel + pRuntimeEntry[nCount].BeginAddress);
 		auto nFunctionSize = pRuntimeEntry[nCount].EndAddress - pRuntimeEntry[nCount].BeginAddress;
 
-		for (auto idx = 0; idx < nFunctionSize; idx++)
+		for (auto idx = 0; idx < (nFunctionSize - 5); idx++)
 		{
 			if ((pFunctionBase[idx] != 0xB8) || (pFunctionBase[idx + 5] != 0xE9)) // mov eax, ??; jmp ??
 				continue;
