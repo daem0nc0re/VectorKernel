@@ -973,6 +973,7 @@ NTSTATUS CreateElavatedToken(_Out_ PHANDLE pTokenHandle)
 
 	if ((pTokenGroups == nullptr) || (pTokenPrivileges == nullptr) || (pDefaultDacl == nullptr))
 	{
+		*pTokenHandle = nullptr;
 		KdPrint((DRIVER_PREFIX "Failed to allocate non-paged pool.\n"));
 	}
 	else
