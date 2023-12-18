@@ -158,6 +158,7 @@ NTSTATUS OnDeviceControl(
 	ULONG_PTR info = NULL;
 	PIO_STACK_LOCATION irpSp = ::IoGetCurrentIrpStackLocation(Irp);
 	auto& dic = irpSp->Parameters.DeviceIoControl;
+	HANDLE pid = nullptr;
 
 	switch (dic.IoControlCode)
 	{
@@ -169,7 +170,13 @@ NTSTATUS OnDeviceControl(
 			break;
 		}
 
-		g_TargetPid = ULongToHandle(*(ULONG*)Irp->AssociatedIrp.SystemBuffer);
+		pid = ULongToHandle(*(ULONG*)Irp->AssociatedIrp.SystemBuffer);
+
+		if ((pid == ULongToHandle(0u)) || (pid == ULongToHandle(4u)))
+		{
+			KdPrint((DRIVER_PREFIX "PID 0 or 4 is not supported.\n"));
+			break;
+		}
 
 		if (g_RegistrationHandle == nullptr)
 		{
@@ -191,8 +198,6 @@ NTSTATUS OnDeviceControl(
 
 			if (!NT_SUCCESS(ntstatus))
 			{
-				g_TargetPid = nullptr;
-
 				if (ntstatus == STATUS_FLT_INSTANCE_ALTITUDE_COLLISION)
 					KdPrint((DRIVER_PREFIX "Altitude collision. Change altitude value and rebuild this driver.\n"));
 				else
@@ -200,12 +205,14 @@ NTSTATUS OnDeviceControl(
 			}
 			else
 			{
-				KdPrint((DRIVER_PREFIX "Object Notification Callback is registered successfully (Registration Handle = 0x%p).\n", g_RegistrationHandle));
+				g_TargetPid = pid;
 				info = sizeof(PVOID);
+				KdPrint((DRIVER_PREFIX "Object Notification Callback is registered successfully (Registration Handle = 0x%p).\n", g_RegistrationHandle));
 			}
 		}
 		else
 		{
+			g_TargetPid = pid;
 			ntstatus = STATUS_SUCCESS;
 			info = sizeof(ULONG);
 		}
@@ -213,13 +220,20 @@ NTSTATUS OnDeviceControl(
 		break;
 
 	case IOCTL_REMOVE_PROCESS_GUARD:
-		::ObUnRegisterCallbacks(g_RegistrationHandle);
-		g_RegistrationHandle = nullptr;
-		g_TargetPid = ULongToHandle(0u);
-		ntstatus = STATUS_SUCCESS;
-		info = sizeof(PVOID);
+		if (g_RegistrationHandle != nullptr)
+		{
+			::ObUnRegisterCallbacks(g_RegistrationHandle);
+			g_RegistrationHandle = nullptr;
+			g_TargetPid = ULongToHandle(0u);
+			ntstatus = STATUS_SUCCESS;
+			info = sizeof(PVOID);
 
-		KdPrint((DRIVER_PREFIX "Object Notification Callback is removed.\n"));
+			KdPrint((DRIVER_PREFIX "Object Notification Callback is removed.\n"));
+		}
+		else
+		{
+			KdPrint((DRIVER_PREFIX "Object Notification Callback is not registered.\n"));
+		}
 	}
 
 	Irp->IoStatus.Status = ntstatus;
