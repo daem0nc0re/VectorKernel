@@ -13,7 +13,7 @@
 // Ioctl code definition
 //
 #define IOCTL_SET_PROCESS_GUARD CTL_CODE(0x8000, 0x0B00, METHOD_BUFFERED, FILE_ANY_ACCESS)
-#define IOCTL_CLEAR_PROCESS_GUARD CTL_CODE(0x8000, 0x0B01, METHOD_BUFFERED, FILE_ANY_ACCESS)
+#define IOCTL_REMOVE_PROCESS_GUARD CTL_CODE(0x8000, 0x0B01, METHOD_BUFFERED, FILE_ANY_ACCESS)
 
 //
 // Function type definition
@@ -212,7 +212,7 @@ NTSTATUS OnDeviceControl(
 
 		break;
 
-	case IOCTL_CLEAR_PROCESS_GUARD:
+	case IOCTL_REMOVE_PROCESS_GUARD:
 		::ObUnRegisterCallbacks(g_RegistrationHandle);
 		g_RegistrationHandle = nullptr;
 		g_TargetPid = ULongToHandle(0u);
