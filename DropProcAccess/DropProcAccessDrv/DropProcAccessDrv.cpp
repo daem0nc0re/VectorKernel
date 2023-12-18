@@ -23,6 +23,7 @@ typedef PCHAR (NTAPI *PPsGetProcessImageFileName)(_In_ PEPROCESS Process);
 //
 // Global variables
 //
+FAST_MUTEX g_FastMutex{ 0 };
 HANDLE g_TargetPid = nullptr;
 PVOID g_RegistrationHandle = nullptr;
 PPsGetProcessImageFileName PsGetProcessImageFileName = nullptr;
@@ -76,6 +77,8 @@ NTSTATUS DriverEntry(
 			KdPrint((DRIVER_PREFIX "PsGetProcessImageFileName() API is at 0x%p.\n", (PVOID)PsGetProcessImageFileName));
 		}
 
+		::ExInitializeFastMutex(&g_FastMutex);
+
 		ntstatus = ::IoCreateDevice(
 			DriverObject,
 			NULL,
@@ -119,12 +122,16 @@ void DriverUnload(_In_ PDRIVER_OBJECT DriverObject)
 {
 	UNICODE_STRING symlinkPath = RTL_CONSTANT_STRING(SYMLINK_PATH);
 
+	::ExAcquireFastMutex(&g_FastMutex);
+
 	if (g_RegistrationHandle != nullptr)
 	{
 		::ObUnRegisterCallbacks(g_RegistrationHandle);
 		g_RegistrationHandle = nullptr;
 		KdPrint((DRIVER_PREFIX "Object Notification Callback is removed.\n"));
 	}
+
+	::ExReleaseFastMutex(&g_FastMutex);
 
 	::IoDeleteSymbolicLink(&symlinkPath);
 	::IoDeleteDevice(DriverObject->DeviceObject);
@@ -178,6 +185,8 @@ NTSTATUS OnDeviceControl(
 			break;
 		}
 
+		::ExAcquireFastMutex(&g_FastMutex);
+
 		if (g_RegistrationHandle == nullptr)
 		{
 			OB_CALLBACK_REGISTRATION callbackRegistration{};
@@ -217,9 +226,12 @@ NTSTATUS OnDeviceControl(
 			info = sizeof(ULONG);
 		}
 
+		::ExReleaseFastMutex(&g_FastMutex);
 		break;
 
 	case IOCTL_REMOVE_PROCESS_GUARD:
+		::ExAcquireFastMutex(&g_FastMutex);
+
 		if (g_RegistrationHandle != nullptr)
 		{
 			::ObUnRegisterCallbacks(g_RegistrationHandle);
@@ -234,6 +246,8 @@ NTSTATUS OnDeviceControl(
 		{
 			KdPrint((DRIVER_PREFIX "Object Notification Callback is not registered.\n"));
 		}
+
+		::ExReleaseFastMutex(&g_FastMutex);
 	}
 
 	Irp->IoStatus.Status = ntstatus;
