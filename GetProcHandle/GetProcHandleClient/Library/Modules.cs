@@ -49,7 +49,7 @@ namespace GetProcHandleClient.Library
                 }
                 else
                 {
-                    Console.WriteLine("[+] Got a handle to {0} (Handle = 0x{1})", Globals.SYMLINK_PATH, hDevice.ToString("X"));
+                    Console.WriteLine("[+] Got a handle to {0} (Handle = 0x{1}).", Globals.SYMLINK_PATH, hDevice.ToString("X"));
                 }
 
                 ntstatus = NativeMethods.NtDeviceIoControlFile(

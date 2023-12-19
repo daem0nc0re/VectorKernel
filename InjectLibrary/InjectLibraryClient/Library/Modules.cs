@@ -32,7 +32,7 @@ namespace InjectLibraryClient.Library
 
             if (!bSuccess)
             {
-                Console.WriteLine("[-] Failed to CreateProcess() API (Error = 0x{0})", Marshal.GetLastWin32Error().ToString("X8"));
+                Console.WriteLine("[-] Failed to CreateProcess() API (Error = 0x{0}).", Marshal.GetLastWin32Error().ToString("X8"));
             }
             else
             {
@@ -93,7 +93,7 @@ namespace InjectLibraryClient.Library
                 }
                 else
                 {
-                    Console.WriteLine("[+] Got a handle to {0} (Handle = 0x{1})", Globals.SYMLINK_PATH, hDevice.ToString("X"));
+                    Console.WriteLine("[+] Got a handle to {0} (Handle = 0x{1}).", Globals.SYMLINK_PATH, hDevice.ToString("X"));
                 }
 
                 ntstatus = NativeMethods.NtDeviceIoControlFile(
