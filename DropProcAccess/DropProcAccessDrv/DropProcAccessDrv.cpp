@@ -263,8 +263,7 @@ NTSTATUS OnDeviceControl(
 //
 OB_PREOP_CALLBACK_STATUS AccessDropRoutine(
 	_In_ PVOID RegistrationContext,
-	_In_ POB_PRE_OPERATION_INFORMATION OperationInformation
-)
+	_In_ POB_PRE_OPERATION_INFORMATION OperationInformation)
 {
 	UNREFERENCED_PARAMETER(RegistrationContext);
 
