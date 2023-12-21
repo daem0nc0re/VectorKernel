@@ -16,6 +16,40 @@ ULONG g_TokenFlagsOffset = 0u;
 ULONG g_IntegrityLevelIndexOffset = 0u;
 
 //
+// Enum definition
+//
+
+// See: https://microsoft.github.io/windows-docs-rs/doc/windows/Wdk/Storage/FileSystem/constant.TOKEN_IS_FILTERED.html?search=windows%3A%3AWdk%3A%3AStorage%3A%3AFileSystem%3A%3ATOKEN_
+typedef enum _TOKEN_FLAGS
+{
+	HasTraversePrivilege = 0x00000001,
+	HasBackupPrivilege = 0x00000002,
+	HasRestorePrivilege = 0x00000004,
+	WriteRestricted = 0x00000008,
+	IsRestricted = 0x00000010,
+	SessionNotReferenced = 0x00000020,
+	SandBoxInert = 0x00000040,
+	HasImpersonatePrivilege = 0x00000080,
+	BackupPrivilegesChecked = 0x00000100,
+	VirtualizeAllowed = 0x00000200,
+	VirtualizeEnabled = 0x00000400,
+	IsFiltered = 0x00000800,
+	UiAccess = 0x00001000,
+	NotLow = 0x00002000,
+	LowBox = 0x00004000,
+	HasOwnClaimAttributes = 0x00008000,
+	PrivateNamespace = 0x00010000,
+	DoNotUseGlobalAttributesForQuery = 0x00020000,
+	SpecialEncryptedOpen = 0x00040000,
+	NoChildProcess = 0x00080000,
+	NoChildProcessUnlessSecure = 0x00100000,
+	AuditNoChildProcess = 0x00200000,
+	PermissiveLearningMode = 0x00400000,
+	EnforceRedirectionTrust = 0x00800000,
+	AuditRedirectionTrust = 0x01000000
+} TOKEN_FLAGS;
+
+//
 // Struct definition
 //
 typedef struct _SEP_TOKEN_PRIVILEGES
@@ -265,8 +299,7 @@ NTSTATUS OnDeviceControl(
 				}
 			}
 
-			// Set TokenFlags to 0x00002800 (IsFiltered | NotLow)
-			*(ULONG*)((ULONG_PTR)pPrimaryToken + g_TokenFlagsOffset) = 0x00002800u;
+			*(ULONG*)((ULONG_PTR)pPrimaryToken + g_TokenFlagsOffset) = IsFiltered | NotLow;
 
 			::PsDereferencePrimaryToken(pPrimaryToken);
 			ObDereferenceObject(pEprocess);
