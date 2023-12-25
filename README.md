@@ -30,6 +30,7 @@ All modules are tested in Windows 11.
 
 | Module Name | Description |
 | :--- | :--- |
+| [BlockImageLoad](./BlockImageLoad/) | PoCs to block driver loading with Load Image Notify Callback method. |
 | [BlockNewProc](./BlockNewProc/) | PoCs to block new process with Process Notify Callback method. |
 | [CreateToken](./CreateToken/) | PoCs to get full privileged SYSTEM token with `ZwCreateToken()` API. |
 | [DropProcAccess](./DropProcAccess/) | PoCs to drop process handle access with Object Notify Callback. |
