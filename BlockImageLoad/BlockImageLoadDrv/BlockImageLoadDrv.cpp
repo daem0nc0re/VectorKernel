@@ -105,6 +105,7 @@ typedef struct _MODULE_NAME
 //
 // Global variables
 //
+FAST_MUTEX g_FastMutex{ 0 };
 struct : UNICODE_STRING { WCHAR buf[257]; } g_ImageFileName{ };
 BOOLEAN g_Registered = FALSE;
 
@@ -149,6 +150,8 @@ NTSTATUS DriverEntry(
 		g_ImageFileName.MaximumLength = sizeof(UCHAR) * 257;
 		g_ImageFileName.Buffer = (PWCH)&g_ImageFileName.buf;
 		::memset(&g_ImageFileName.buf, 0, sizeof(USHORT) * 257);
+
+		::ExInitializeFastMutex(&g_FastMutex);
 
 		ntstatus = ::IoCreateDevice(
 			DriverObject,
@@ -196,7 +199,10 @@ void DriverUnload(_In_ PDRIVER_OBJECT DriverObject)
 	::IoDeleteDevice(DriverObject->DeviceObject);
 
 	if (g_Registered)
+	{
 		::PsRemoveLoadImageNotifyRoutine(LoadImageBlockRoutine);
+		g_Registered = FALSE;
+	}
 
 	KdPrint((DRIVER_PREFIX "Driver is unloaded.\n"));
 }
@@ -239,6 +245,7 @@ NTSTATUS OnDeviceControl(
 			break;
 		}
 
+		::ExAcquireFastMutex(&g_FastMutex);
 		::memset(&g_ImageFileName.buf, 0, sizeof(USHORT) * 257);
 
 		for (auto idx = 0; idx < 256; idx++)
@@ -279,23 +286,28 @@ NTSTATUS OnDeviceControl(
 			info = g_ImageFileName.Length;
 		}
 
+		::ExReleaseFastMutex(&g_FastMutex);
 		break;
 
 	case IOCTL_UNSET_MODULE_BLOCK:
+		::ExAcquireFastMutex(&g_FastMutex);
+
 		if (g_Registered)
 		{
 			::PsRemoveLoadImageNotifyRoutine(LoadImageBlockRoutine);
 			g_ImageFileName.Length = 0u;
 			::memset(&g_ImageFileName.buf, 0, sizeof(USHORT) * 257);
-			ntstatus = STATUS_SUCCESS;
 			g_Registered = FALSE;
+			ntstatus = STATUS_SUCCESS;
 
-			KdPrint((DRIVER_PREFIX "Load Image Notify callback is unregistered successfully.\n"));
+			KdPrint((DRIVER_PREFIX "Load Image Notify Callback is unregistered successfully.\n"));
 		}
 		else
 		{
-			KdPrint((DRIVER_PREFIX "Load Image Notify callback is not registered.\n"));
+			KdPrint((DRIVER_PREFIX "Load Image Notify Callback is not registered.\n"));
 		}
+
+		::ExReleaseFastMutex(&g_FastMutex);
 	}
 
 	Irp->IoStatus.Status = ntstatus;
