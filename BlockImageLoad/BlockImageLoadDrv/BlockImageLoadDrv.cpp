@@ -97,10 +97,10 @@ typedef struct _IMAGE_NT_HEADERS64
 //
 // Custom sturct definition
 //
-typedef struct _MODULE_NAME
+typedef struct _BLOCK_IMAGE_INFO
 {
 	WCHAR ImageFileName[256];
-} MODULE_NAME, *PMODULE_NAME;
+} BLOCK_IMAGE_INFO, *PBLOCK_IMAGE_INFO;
 
 //
 // Global variables
@@ -238,7 +238,7 @@ NTSTATUS OnDeviceControl(
 	switch (dic.IoControlCode)
 	{
 	case IOCTL_SET_MODULE_BLOCK:
-		if (dic.InputBufferLength < sizeof(MODULE_NAME))
+		if (dic.InputBufferLength < sizeof(BLOCK_IMAGE_INFO))
 		{
 			ntstatus = STATUS_BUFFER_TOO_SMALL;
 			KdPrint((DRIVER_PREFIX "Input buffer is too small.\n"));
