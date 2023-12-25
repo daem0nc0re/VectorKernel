@@ -11,6 +11,18 @@ All modules support 64bit OS only.
 > If you want to test the modules in old OSes, replace `ExAllocatePool2` API with `ExAllocatePoolWithTag` API.
 
 
+## Environment
+
+All modules are tested in Windows 11 x64.
+To test drivers, following options can be used for the testing machine:
+
+1. [Enable Loading of Test Signed Drivers](https://learn.microsoft.com/en-us/windows-hardware/drivers/install/the-testsigning-boot-configuration-option)
+
+2. [Setting Up Kernel-Mode Debugging](https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/setting-up-kernel-mode-debugging-in-windbg--cdb--or-ntsd)
+
+Each options require to disable secure boot.
+
+
 ## Modules
 
 Detailed information is given in README.md in each project's directories.
