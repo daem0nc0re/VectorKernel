@@ -34,7 +34,7 @@ typedef struct _IMAGE_DOS_HEADER
 	USHORT e_oeminfo;
 	USHORT e_res2[10];
 	LONG e_lfanew;
-} IMAGE_DOS_HEADER, * PIMAGE_DOS_HEADER;
+} IMAGE_DOS_HEADER, *PIMAGE_DOS_HEADER;
 
 typedef struct _IMAGE_FILE_HEADER
 {
@@ -45,13 +45,13 @@ typedef struct _IMAGE_FILE_HEADER
 	LONG NumberOfSymbols;
 	SHORT SizeOfOptionalHeader;
 	SHORT Characteristics;
-} IMAGE_FILE_HEADER, * PIMAGE_FILE_HEADER;
+} IMAGE_FILE_HEADER, *PIMAGE_FILE_HEADER;
 
 typedef struct _IMAGE_DATA_DIRECTORY
 {
 	LONG VirtualAddress;
 	LONG Size;
-} IMAGE_DATA_DIRECTORY, * PIMAGE_DATA_DIRECTORY;
+} IMAGE_DATA_DIRECTORY, *PIMAGE_DATA_DIRECTORY;
 
 typedef struct _IMAGE_OPTIONAL_HEADER64
 {
@@ -85,14 +85,14 @@ typedef struct _IMAGE_OPTIONAL_HEADER64
 	LONG LoaderFlags;
 	LONG NumberOfRvaAndSizes;
 	IMAGE_DATA_DIRECTORY DataDirectory[16];
-} IMAGE_OPTIONAL_HEADER, * PIMAGE_OPTIONAL_HEADER;
+} IMAGE_OPTIONAL_HEADER, *PIMAGE_OPTIONAL_HEADER;
 
 typedef struct _IMAGE_NT_HEADERS64
 {
 	LONG Signature;
 	IMAGE_FILE_HEADER FileHeader;
 	IMAGE_OPTIONAL_HEADER OptionalHeader;
-} IMAGE_NT_HEADERS, * PIMAGE_NT_HEADERS;
+} IMAGE_NT_HEADERS, *PIMAGE_NT_HEADERS;
 
 //
 // Custom sturct definition
@@ -126,7 +126,7 @@ void LoadImageBlockRoutine(
 	_In_ HANDLE ProcessId,
 	_In_ PIMAGE_INFO ImageInfo
 );
-BOOLEAN WriteBytesToNonWritableBuffer(PVOID Dst, PVOID Src, SIZE_T Len);
+BOOLEAN WriteBytesToNonWritableBuffer(_In_ PVOID Dst, _In_ PVOID Src, _In_ SIZE_T Len);
 
 //
 // Driver routines
@@ -361,13 +361,15 @@ void LoadImageBlockRoutine(
 }
 
 
-BOOLEAN WriteBytesToNonWritableBuffer(PVOID Dst, PVOID Src, SIZE_T Len)
+BOOLEAN WriteBytesToNonWritableBuffer(_In_ PVOID Dst, _In_ PVOID Src, _In_ SIZE_T Len)
 {
-	UNREFERENCED_PARAMETER(Src);
 	PVOID pWritableMap = nullptr;
 	BOOLEAN bLocked = FALSE;
 	BOOLEAN bSuccess = FALSE;
 	PMDL pMdl = ::IoAllocateMdl(Dst, (ULONG)Len, FALSE, FALSE, nullptr);
+
+	if ((Dst == nullptr) || (Src == nullptr) || (Len == 0))
+		return FALSE;
 
 	if (pMdl == nullptr)
 	{
