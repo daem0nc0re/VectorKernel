@@ -65,3 +65,5 @@ More PoCs especially about following things will be added later:
 * [Pavel Yosifovich, Mark E. Russinovich, Alex Ionescu, and David A. Solomon, **_Windows Internals, Part 1: System architecture, processes, threads, memory management, and more, 7th Edition_** (Microsoft Press, 2017)](https://www.microsoftpressstore.com/store/windows-internals-part-1-system-architecture-processes-9780735684188)
 
 * [Andrea Allievi, Mark E. Russinovich, Alex Ionescu, and David A. Solomon, **_Windows Internals, Part 2, 7th Edition_** (Microsoft Press, 2021)](https://www.microsoftpressstore.com/store/windows-internals-part-2-9780135462409)
+
+* [Matt Hand, **_Evading EDR - The Definitive Guide to Defeating Endpoint Detection Systems_** (No Starch Press, 2023)](https://nostarch.com/evading-edr)
