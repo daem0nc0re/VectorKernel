@@ -363,13 +363,15 @@ void LoadImageBlockRoutine(
 
 BOOLEAN WriteBytesToNonWritableBuffer(_In_ PVOID Dst, _In_ PVOID Src, _In_ SIZE_T Len)
 {
+	PMDL pMdl = nullptr;
 	PVOID pWritableMap = nullptr;
 	BOOLEAN bLocked = FALSE;
 	BOOLEAN bSuccess = FALSE;
-	PMDL pMdl = ::IoAllocateMdl(Dst, (ULONG)Len, FALSE, FALSE, nullptr);
 
 	if ((Dst == nullptr) || (Src == nullptr) || (Len == 0))
 		return FALSE;
+
+	pMdl = ::IoAllocateMdl(Dst, (ULONG)Len, FALSE, FALSE, nullptr);
 
 	if (pMdl == nullptr)
 	{
