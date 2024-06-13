@@ -58,8 +58,6 @@ namespace ElevateHandleClient.Library
                     Console.WriteLine("[*] Current ImagePath is \"{0}\".", imagePath);
                 }
 
-                Console.WriteLine("[>] Sending a query to {0}.", Globals.SYMLINK_PATH);
-
                 using (var objectAttributes = new OBJECT_ATTRIBUTES(
                     Globals.SYMLINK_PATH,
                     OBJECT_ATTRIBUTES_FLAGS.OBJ_CASE_INSENSITIVE))
