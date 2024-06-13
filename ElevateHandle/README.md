@@ -29,7 +29,9 @@ Usage: ElevateHandleClient.exe [Options]
 ```
 
 For example, in Windows 10/11, we can start `dmwappushservice` service any users.
-If attacers succeeds in tampering service registry key, it leads privilege escalation as follows:
+If attacers succeeds in tampering service registry key, it leads privilege escalation.
+To test this situation, I put sample DLL to pop up shell in desktop session.
+After `ImagePath` value modification, start the modified service as follows:
 
 ```
 PS C:\Dev> sc.exe qc dmwappushservice | findstr /i path
