@@ -1,6 +1,6 @@
 # ElevateHandle
 
-PoCs to elevate handle access with DKOM.
+PoCs to elevate handle access with DKOM method.
 
 ## Installation
 
