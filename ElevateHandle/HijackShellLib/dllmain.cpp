@@ -2,7 +2,7 @@
 
 extern "C"
 {
-    __declspec(dllexport) VOID FaileEntry()
+    __declspec(dllexport) VOID FakeEntry()
     {
         return;
     }
