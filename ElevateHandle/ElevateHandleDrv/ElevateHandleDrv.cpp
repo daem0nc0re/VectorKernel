@@ -392,6 +392,7 @@ NTSTATUS OnDeviceControl(
 
 			if (HandleToULong(handleValue) >= *(ULONG*)((ULONG_PTR)pObjectTable + g_NextHandleNeedingPoolOffset))
 			{
+				ObDereferenceObject(pEprocess);
 				ntstatus = STATUS_NOT_FOUND;
 				break;
 			}
@@ -414,15 +415,13 @@ NTSTATUS OnDeviceControl(
 				pEntry = (PHANDLE_TABLE_ENTRY)(pEntries + ((ULONG_PTR)handleValue << 2));
 			}
 
-			KdPrint((DRIVER_PREFIX "nt!_HANDLE_TABLE_ENTRY is at 0x%p.\n", (VOID*)pEntry));
-
 			nOriginalAccess = pEntry->GrantedAccess;
 			pEntry->GrantedAccess |= accessMask;
 			ntstatus = STATUS_SUCCESS;
-
-			KdPrint((DRIVER_PREFIX "GrantedAccess is updated from 0x%08X to 0x%08X.\n", nOriginalAccess, pEntry->GrantedAccess));
-
 			ObDereferenceObject(pEprocess);
+
+			KdPrint((DRIVER_PREFIX "nt!_HANDLE_TABLE_ENTRY is at 0x%p.\n", (VOID*)pEntry));
+			KdPrint((DRIVER_PREFIX "GrantedAccess is updated from 0x%08X to 0x%08X.\n", nOriginalAccess, pEntry->GrantedAccess));
 		}
 	}
 
