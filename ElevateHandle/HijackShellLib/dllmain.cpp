@@ -24,7 +24,7 @@ extern "C"
 
         bSuccess = ::OpenProcessToken(
             ::GetCurrentProcess(),
-            TOKEN_DUPLICATE | TOKEN_ADJUST_SESSIONID,
+            TOKEN_DUPLICATE,
             &hToken);
 
         if (!bSuccess)

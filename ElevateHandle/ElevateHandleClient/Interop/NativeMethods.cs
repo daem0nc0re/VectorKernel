@@ -22,7 +22,7 @@ namespace ElevateHandleClient.Interop
             FILE_CREATE_DISPOSITION CreateDisposition,
             FILE_CREATE_OPTIONS CreateOptions,
             IntPtr EaBuffer,
-        uint EaLength);
+            uint EaLength);
 
         [DllImport("ntdll.dll")]
         public static extern NTSTATUS NtDeviceIoControlFile(
