@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#define SE_ASSIGN_PRIMARY_TOKEN_PRIVILEGE 3
+#define SE_ASSIGNPRIMARYTOKEN_PRIVILEGE 3
 #define SE_TCB_PRIVILEGE 7
 
 extern "C"
@@ -17,7 +17,7 @@ extern "C"
         PWTS_SESSION_INFOW pSessionInfo = nullptr;
         DWORD nCount = 0;
         DWORD requiredPrivs[] = {
-            SE_ASSIGN_PRIMARY_TOKEN_PRIVILEGE,
+            SE_ASSIGNPRIMARYTOKEN_PRIVILEGE,
             SE_TCB_PRIVILEGE
         };
         HANDLE hToken = NULL;
