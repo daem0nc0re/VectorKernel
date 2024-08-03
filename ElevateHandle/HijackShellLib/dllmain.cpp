@@ -20,6 +20,10 @@ extern "C"
             SE_ASSIGN_PRIMARY_TOKEN_PRIVILEGE,
             SE_TCB_PRIVILEGE
         };
+        HANDLE hToken = NULL;
+        HANDLE hDupToken = NULL;
+        STARTUPINFO si = { 0 };
+        PROCESS_INFORMATION pi = { 0 };
         BOOL bSuccess = WTSEnumerateSessionsW(
             NULL,
             0,
@@ -62,63 +66,57 @@ extern "C"
 
         ::CloseHandle(hCurrentToken);
 
-        do
+        si.cb = sizeof(si);
+        si.wShowWindow = SW_SHOW;
+        si.lpDesktop = const_cast<wchar_t*>(L"Winsta0\\Default");
+
+        bSuccess = ::OpenProcessToken((HANDLE)-1, TOKEN_DUPLICATE, &hToken);
+
+        if (!bSuccess)
+            return FALSE;
+
+        bSuccess = ::DuplicateTokenEx(
+            hToken,
+            TOKEN_ADJUST_DEFAULT | TOKEN_ADJUST_SESSIONID | TOKEN_ASSIGN_PRIMARY | TOKEN_QUERY,
+            nullptr,
+            SecurityAnonymous,
+            TokenPrimary,
+            &hDupToken);
+        ::CloseHandle(hToken);
+
+        if (!bSuccess)
+            return FALSE;
+
+        // Requires SeTcbPrivilege
+        bSuccess = ::SetTokenInformation(
+            hDupToken,
+            TokenSessionId,
+            &nDesktopSessionId,
+            sizeof(nDesktopSessionId));
+
+        if (bSuccess)
         {
-            HANDLE hToken = NULL;
-            HANDLE hDupToken = NULL;
-            STARTUPINFO si = { 0 };
-            PROCESS_INFORMATION pi = { 0 };
-            si.cb = sizeof(si);
-            si.wShowWindow = SW_SHOW;
-            si.lpDesktop = const_cast<wchar_t*>(L"Winsta0\\Default");
-            bSuccess = ::OpenProcessToken((HANDLE)-1, TOKEN_DUPLICATE, &hToken);
-
-            if (!bSuccess)
-                break;
-
-            bSuccess = ::DuplicateTokenEx(
-                hToken,
-                TOKEN_ADJUST_DEFAULT | TOKEN_ADJUST_SESSIONID | TOKEN_ASSIGN_PRIMARY | TOKEN_QUERY,
-                nullptr,
-                SecurityAnonymous,
-                TokenPrimary,
-                &hDupToken);
-            ::CloseHandle(hToken);
-
-            if (!bSuccess)
-                break;
-
-            // Requires SeTcbPrivilege
-            bSuccess = ::SetTokenInformation(
+            bSuccess = ::CreateProcessAsUser(
                 hDupToken,
-                TokenSessionId,
-                &nDesktopSessionId,
-                sizeof(nDesktopSessionId));
+                const_cast<wchar_t*>(L"C:\\Windows\\System32\\cmd.exe"),
+                const_cast<wchar_t*>(L""),
+                nullptr,
+                nullptr,
+                FALSE,
+                CREATE_BREAKAWAY_FROM_JOB | CREATE_NEW_CONSOLE,
+                nullptr,
+                nullptr,
+                &si,
+                &pi);
+        }
 
-            if (bSuccess)
-            {
-                bSuccess = ::CreateProcessAsUser(
-                    hDupToken,
-                    const_cast<wchar_t*>(L"C:\\Windows\\System32\\cmd.exe"),
-                    const_cast<wchar_t*>(L""),
-                    nullptr,
-                    nullptr,
-                    FALSE,
-                    CREATE_BREAKAWAY_FROM_JOB | CREATE_NEW_CONSOLE,
-                    nullptr,
-                    nullptr,
-                    &si,
-                    &pi);
-            }
+        ::CloseHandle(hDupToken);
 
-            ::CloseHandle(hDupToken);
-
-            if (bSuccess)
-            {
-                ::CloseHandle(pi.hThread);
-                ::CloseHandle(pi.hProcess);
-            }
-        } while (FALSE);
+        if (bSuccess)
+        {
+            ::CloseHandle(pi.hThread);
+            ::CloseHandle(pi.hProcess);
+        }
 
         return bSuccess;
     }
