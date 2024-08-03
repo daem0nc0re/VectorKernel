@@ -22,7 +22,6 @@ extern "C"
         };
         HANDLE hToken = NULL;
         HANDLE hDupToken = NULL;
-        STARTUPINFO si = { 0 };
         PROCESS_INFORMATION pi = { 0 };
         BOOL bSuccess = WTSEnumerateSessionsW(
             NULL,
@@ -65,11 +64,6 @@ extern "C"
         }
 
         ::CloseHandle(hCurrentToken);
-
-        si.cb = sizeof(si);
-        si.wShowWindow = SW_SHOW;
-        si.lpDesktop = const_cast<wchar_t*>(L"Winsta0\\Default");
-
         bSuccess = ::OpenProcessToken((HANDLE)-1, TOKEN_DUPLICATE, &hToken);
 
         if (!bSuccess)
@@ -88,36 +82,39 @@ extern "C"
             return FALSE;
 
         // Requires SeTcbPrivilege
-        bSuccess = ::SetTokenInformation(
-            hDupToken,
-            TokenSessionId,
-            &nDesktopSessionId,
-            sizeof(nDesktopSessionId));
-
-        if (bSuccess)
-        {
-            bSuccess = ::CreateProcessAsUser(
+            bSuccess = ::SetTokenInformation(
                 hDupToken,
-                const_cast<wchar_t*>(L"C:\\Windows\\System32\\cmd.exe"),
-                const_cast<wchar_t*>(L""),
-                nullptr,
-                nullptr,
-                FALSE,
-                CREATE_BREAKAWAY_FROM_JOB | CREATE_NEW_CONSOLE,
-                nullptr,
-                nullptr,
-                &si,
-                &pi);
-        }
+                TokenSessionId,
+                &nDesktopSessionId,
+                sizeof(nDesktopSessionId));
 
-        ::CloseHandle(hDupToken);
+            if (bSuccess)
+            {
+                STARTUPINFO si = { 0 };
+                si.cb = sizeof(si);
+                si.wShowWindow = SW_SHOW;
+                si.lpDesktop = const_cast<wchar_t*>(L"Winsta0\\Default");
+                bSuccess = ::CreateProcessAsUser(
+                    hDupToken,
+                    const_cast<wchar_t*>(L"C:\\Windows\\System32\\cmd.exe"),
+                    const_cast<wchar_t*>(L""),
+                    nullptr,
+                    nullptr,
+                    FALSE,
+                    CREATE_BREAKAWAY_FROM_JOB | CREATE_NEW_CONSOLE,
+                    nullptr,
+                    nullptr,
+                    &si,
+                    &pi);
+            }
 
-        if (bSuccess)
-        {
-            ::CloseHandle(pi.hThread);
-            ::CloseHandle(pi.hProcess);
-        }
+            ::CloseHandle(hDupToken);
 
+            if (bSuccess)
+            {
+                ::CloseHandle(pi.hThread);
+                ::CloseHandle(pi.hProcess);
+            }
         return bSuccess;
     }
 }
