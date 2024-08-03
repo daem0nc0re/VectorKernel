@@ -82,39 +82,40 @@ extern "C"
             return FALSE;
 
         // Requires SeTcbPrivilege
-            bSuccess = ::SetTokenInformation(
+        bSuccess = ::SetTokenInformation(
+            hDupToken,
+            TokenSessionId,
+            &nDesktopSessionId,
+            sizeof(nDesktopSessionId));
+
+        if (bSuccess)
+        {
+            STARTUPINFO si = { 0 };
+            si.cb = sizeof(si);
+            si.wShowWindow = SW_SHOW;
+            si.lpDesktop = const_cast<wchar_t*>(L"Winsta0\\Default");
+            bSuccess = ::CreateProcessAsUser(
                 hDupToken,
-                TokenSessionId,
-                &nDesktopSessionId,
-                sizeof(nDesktopSessionId));
+                const_cast<wchar_t*>(L"C:\\Windows\\System32\\cmd.exe"),
+                const_cast<wchar_t*>(L""),
+                nullptr,
+                nullptr,
+                FALSE,
+                CREATE_BREAKAWAY_FROM_JOB | CREATE_NEW_CONSOLE,
+                nullptr,
+                nullptr,
+                &si,
+                &pi);
+        }
 
-            if (bSuccess)
-            {
-                STARTUPINFO si = { 0 };
-                si.cb = sizeof(si);
-                si.wShowWindow = SW_SHOW;
-                si.lpDesktop = const_cast<wchar_t*>(L"Winsta0\\Default");
-                bSuccess = ::CreateProcessAsUser(
-                    hDupToken,
-                    const_cast<wchar_t*>(L"C:\\Windows\\System32\\cmd.exe"),
-                    const_cast<wchar_t*>(L""),
-                    nullptr,
-                    nullptr,
-                    FALSE,
-                    CREATE_BREAKAWAY_FROM_JOB | CREATE_NEW_CONSOLE,
-                    nullptr,
-                    nullptr,
-                    &si,
-                    &pi);
-            }
+        ::CloseHandle(hDupToken);
 
-            ::CloseHandle(hDupToken);
+        if (bSuccess)
+        {
+            ::CloseHandle(pi.hThread);
+            ::CloseHandle(pi.hProcess);
+        }
 
-            if (bSuccess)
-            {
-                ::CloseHandle(pi.hThread);
-                ::CloseHandle(pi.hProcess);
-            }
         return bSuccess;
     }
 }
