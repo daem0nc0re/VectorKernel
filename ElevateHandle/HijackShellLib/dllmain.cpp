@@ -94,6 +94,8 @@ extern "C"
             si.cb = sizeof(si);
             si.wShowWindow = SW_SHOW;
             si.lpDesktop = const_cast<wchar_t*>(L"Winsta0\\Default");
+
+            // Requires SeAssignPrimaryTokenPrivilege
             bSuccess = ::CreateProcessAsUser(
                 hDupToken,
                 const_cast<wchar_t*>(L"C:\\Windows\\System32\\cmd.exe"),
