@@ -364,10 +364,10 @@ NTSTATUS OnDeviceControl(
 		PEPROCESS pEprocess = nullptr;
 		auto context = (PELEVATE_HANDLE_INPUT)Irp->AssociatedIrp.SystemBuffer;
 		HANDLE pid = context->UniqueProcessId;
-		HANDLE handleValue = context->HandleValue;
+		HANDLE handleValue = ULongToHandle(HandleToULong(context->HandleValue) & ~3u);
 		ULONG accessMask = context->AccessMask & VALID_GRANTED_ACCESS_BITS_MASK;
 
-		if ((handleValue == NULL) || (((ULONG_PTR)handleValue & 3) != NULL))
+		if (handleValue == NULL)
 		{
 			ntstatus = STATUS_INVALID_PARAMETER;
 			break;
@@ -382,13 +382,11 @@ NTSTATUS OnDeviceControl(
 		}
 		else
 		{
-			ULONG_PTR pBaseBuffer;
 			PHANDLE_TABLE_ENTRY pEntry;
 			ULONG nOriginalAccess;
 			auto pObjectTable = *(ULONG_PTR*)((ULONG_PTR)pEprocess + g_ObjectTableOffset);
 			auto pEntries = *(ULONG_PTR*)((ULONG_PTR)pObjectTable + g_TableCodeOffset);
 			auto nonce = (ULONG)(pEntries & 3);
-			auto nFactor = (ULONG_PTR)handleValue >> 0xA;
 
 			if (HandleToULong(handleValue) >= *(ULONG*)((ULONG_PTR)pObjectTable + g_NextHandleNeedingPoolOffset))
 			{
@@ -400,19 +398,20 @@ NTSTATUS OnDeviceControl(
 			KdPrint((DRIVER_PREFIX "UniqueProcessId = 0x%X, HandleValue = 0x%X\n", HandleToULong(pid), HandleToUlong(handleValue)));
 
 			// This routine is written with reference to nt!ExpLookupHandleTableEntry
-			if (nonce == 1)
+			if (nonce == 0)
 			{
-				pBaseBuffer = *(ULONG_PTR*)(pEntries + (nFactor << 3) - 1);
-				pEntry = (PHANDLE_TABLE_ENTRY)(pBaseBuffer + ((ULONG_PTR)(HandleToULong(handleValue) & 0x3FFu) << 2));
+				pEntry = (PHANDLE_TABLE_ENTRY)(pEntries + ((ULONG_PTR)handleValue << 2));
 			}
-			else if (nonce > 1)
+			else if (nonce == 1)
 			{
-				pBaseBuffer = *(ULONG_PTR*)((pEntries + ((nFactor >> 9) << 3)) - 2) + ((nFactor & 0x1FFu) << 3);
-				pEntry = (PHANDLE_TABLE_ENTRY)(pBaseBuffer + ((ULONG_PTR)(HandleToULong(handleValue) & 0x3FFu) << 2));
+				auto pEntryBase = *(ULONG_PTR*)(pEntries + (((ULONG_PTR)handleValue >> 10) << 3) - 1);
+				pEntry = (PHANDLE_TABLE_ENTRY)(pEntryBase + (((ULONG_PTR)handleValue & 0x3FF) << 2));
 			}
 			else
 			{
-				pEntry = (PHANDLE_TABLE_ENTRY)(pEntries + ((ULONG_PTR)handleValue << 2));
+				auto pSubEntry = *(ULONG_PTR*)(pEntries + (((ULONG_PTR)handleValue >> 19) << 3) - 2);
+				auto pEntryBase = *(ULONG_PTR*)(pSubEntry + ((((ULONG_PTR)handleValue >> 10) & 0x1FF) << 3));
+				pEntry = (PHANDLE_TABLE_ENTRY)(pEntryBase + (((ULONG_PTR)handleValue & 0x3FF) << 2));
 			}
 
 			nOriginalAccess = pEntry->GrantedAccess;
