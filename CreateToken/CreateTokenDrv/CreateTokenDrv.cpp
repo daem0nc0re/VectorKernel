@@ -5,8 +5,6 @@
 #define SYMLINK_PATH L"\\??\\CreateToken"
 #define DRIVER_TAG 'lnKV'
 
-#pragma warning(disable: 4996) // This warning is caused when use old ExAllocatePoolWithTag() API.
-
 //
 // Ioctl code definition
 //
@@ -507,7 +505,7 @@ NTSTATUS DriverEntry(
 
 		if (pExAllocatePool2 == nullptr)
 		{
-			KdPrint((DRIVER_PREFIX "Failed to resolve ExAllocatePool2() API. Trying to resolve ExAllocatePoolWithTag() API\n"));
+			KdPrint((DRIVER_PREFIX "Failed to resolve ExAllocatePool2() API. Trying to resolve ExAllocatePoolWithTag() API.\n"));
 			::RtlInitUnicodeString(&routineName, L"ExAllocatePoolWithTag");
 			pExAllocatePoolWithTag = (PExAllocatePoolWithTag)::MmGetSystemRoutineAddress(&routineName);
 		}

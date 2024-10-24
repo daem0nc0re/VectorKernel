@@ -6,7 +6,6 @@
 #define DRIVER_TAG 'lnKV'
 
 #pragma warning(disable: 4201) // This warning is caused by SECTION_IMAGE_INFORMATION definition
-#pragma warning(disable: 4996) // This warning is caused when use old ExAllocatePoolWithTag() API.
 
 //
 // Ioctl code definition
@@ -239,6 +238,16 @@ typedef BOOLEAN(NTAPI *PKeInsertQueueApc)(
 	_In_opt_ PVOID SystemArgument2,
 	_In_ KPRIORITY Increment
 );
+typedef PVOID(NTAPI* PExAllocatePool2)(
+	_In_ POOL_FLAGS Flags,
+	_In_ SIZE_T NumberOfBytes,
+	_In_ ULONG Tag
+);
+typedef PVOID(NTAPI* PExAllocatePoolWithTag)(
+	_In_ __drv_strictTypeMatch(__drv_typeExpr)POOL_TYPE PoolType,
+	_In_ SIZE_T NumberOfBytes,
+	_In_ ULONG Tag
+);
 
 //
 // API address storage
@@ -248,6 +257,8 @@ PZwQuerySection ZwQuerySection = nullptr;
 PKeAlertThread KeAlertThread = nullptr;
 PKeInitializeApc KeInitializeApc = nullptr;
 PKeInsertQueueApc KeInsertQueueApc = nullptr;
+PExAllocatePool2 pExAllocatePool2 = nullptr;
+PExAllocatePoolWithTag pExAllocatePoolWithTag = nullptr;
 
 //
 // Prototypes
@@ -269,6 +280,7 @@ VOID NTAPI ApcRoutine(
 	_Inout_ PVOID* SystemArgument1,
 	_Inout_ PVOID* SystemArgument2
 );
+PVOID AllocateNonPagedPool(_In_ SIZE_T nPoolSize);
 
 //
 // Driver routines
@@ -356,6 +368,30 @@ NTSTATUS DriverEntry(
 		else
 		{
 			KdPrint((DRIVER_PREFIX "%wZ() API is at 0x%p.\n", routineName, (PVOID)KeInsertQueueApc));
+		}
+
+		::RtlInitUnicodeString(&routineName, L"ExAllocatePool2");
+		pExAllocatePool2 = (PExAllocatePool2)::MmGetSystemRoutineAddress(&routineName);
+
+		if (pExAllocatePool2 == nullptr)
+		{
+			KdPrint((DRIVER_PREFIX "Failed to resolve ExAllocatePool2() API. Trying to resolve ExAllocatePoolWithTag() API.\n"));
+			::RtlInitUnicodeString(&routineName, L"ExAllocatePoolWithTag");
+			pExAllocatePoolWithTag = (PExAllocatePoolWithTag)::MmGetSystemRoutineAddress(&routineName);
+		}
+
+		if (pExAllocatePool2)
+		{
+			KdPrint((DRIVER_PREFIX "ExAllocatePool2() API is at 0x%p.\n", (PVOID)pExAllocatePool2));
+		}
+		else if (pExAllocatePoolWithTag)
+		{
+			KdPrint((DRIVER_PREFIX "ExAllocatePoolWithTag() API is at 0x%p.\n", (PVOID)pExAllocatePoolWithTag));
+		}
+		else
+		{
+			KdPrint((DRIVER_PREFIX "Failed to resolve ExAllocatePool2() API and ExAllocatePoolWithTag() API.\n"));
+			break;
 		}
 
 		ntstatus = ::IoCreateDevice(
@@ -453,8 +489,7 @@ NTSTATUS OnDeviceControl(
 			break;
 		}
 
-		pKapc = (PKAPC)::ExAllocatePool2(POOL_FLAG_NON_PAGED, sizeof(KAPC), (ULONG)DRIVER_TAG);
-		// pKapc = (PKAPC)::ExAllocatePoolWithTag(NonPagedPool, sizeof(KAPC), (ULONG)DRIVER_TAG);
+		pKapc = (PKAPC)AllocateNonPagedPool(sizeof(KAPC));
 
 		if (pKapc == nullptr)
 		{
@@ -608,6 +643,19 @@ NTSTATUS OnDeviceControl(
 //
 // Helper functions
 //
+PVOID AllocateNonPagedPool(_In_ SIZE_T nPoolSize)
+{
+	PVOID pNonPagedPool = nullptr;
+
+	if (pExAllocatePool2)
+		pNonPagedPool = pExAllocatePool2(POOL_FLAG_NON_PAGED, nPoolSize, (ULONG)DRIVER_TAG);
+	else if (pExAllocatePoolWithTag)
+		pNonPagedPool = pExAllocatePoolWithTag(NonPagedPool, nPoolSize, (ULONG)DRIVER_TAG);
+
+	return pNonPagedPool;
+}
+
+
 PVOID GetNtdllRoutineAddress(_In_ const PCHAR apiName)
 {
 	HANDLE hSection = nullptr;
