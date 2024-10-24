@@ -446,11 +446,23 @@ typedef NTSTATUS (NTAPI *PZwCreateToken)(
 	_In_opt_ PTOKEN_DEFAULT_DACL DefaultDacl,
 	_In_ PTOKEN_SOURCE Source
 );
+typedef PVOID (NTAPI *PExAllocatePool2)(
+	_In_ POOL_FLAGS Flags,
+	_In_ SIZE_T NumberOfBytes,
+	_In_ ULONG Tag
+);
+typedef PVOID (NTAPI *PExAllocatePoolWithTag)(
+	_In_ __drv_strictTypeMatch(__drv_typeExpr)POOL_TYPE PoolType,
+	_In_ SIZE_T NumberOfBytes,
+	_In_ ULONG Tag
+);
 
 //
 // API address storage
 //
 PZwCreateToken ZwCreateToken = nullptr;
+PExAllocatePool2 pExAllocatePool2 = nullptr;
+PExAllocatePoolWithTag pExAllocatePoolWithTag = nullptr;
 
 //
 // Prototypes
@@ -469,6 +481,7 @@ PVOID GetKernelBase();
 LONG GetSystcallNumber(_In_ const PCHAR syscallName);
 PVOID GetZwCreateTokenBase();
 LONG GetCurrentTokenSessionId();
+PVOID AllocateNonPagedPool(_In_ SIZE_T nPoolSize);
 
 //
 // Driver routines
@@ -487,6 +500,31 @@ NTSTATUS DriverEntry(
 	{
 		UNICODE_STRING devicePath = RTL_CONSTANT_STRING(DEVICE_PATH);
 		UNICODE_STRING symlinkPath = RTL_CONSTANT_STRING(SYMLINK_PATH);
+		UNICODE_STRING routineName{ 0 };
+
+		::RtlInitUnicodeString(&routineName, L"ExAllocatePool2");
+		pExAllocatePool2 = (PExAllocatePool2)::MmGetSystemRoutineAddress(&routineName);
+
+		if (pExAllocatePool2 == nullptr)
+		{
+			KdPrint((DRIVER_PREFIX "Failed to resolve ExAllocatePool2() API. Trying to resolve ExAllocatePoolWithTag() API\n"));
+			::RtlInitUnicodeString(&routineName, L"ExAllocatePoolWithTag");
+			pExAllocatePoolWithTag = (PExAllocatePoolWithTag)::MmGetSystemRoutineAddress(&routineName);
+		}
+
+		if (pExAllocatePool2)
+		{
+			KdPrint((DRIVER_PREFIX "ExAllocatePool2() API is at 0x%p.\n", (PVOID)pExAllocatePool2));
+		}
+		else if (pExAllocatePoolWithTag)
+		{
+			KdPrint((DRIVER_PREFIX "ExAllocatePoolWithTag() API is at 0x%p.\n", (PVOID)pExAllocatePoolWithTag));
+		}
+		else
+		{
+			KdPrint((DRIVER_PREFIX "Failed to resolve ExAllocatePool2() API and ExAllocatePoolWithTag() API.\n"));
+			break;
+		}
 
 		ZwCreateToken = (PZwCreateToken)GetZwCreateTokenBase();
 
@@ -652,6 +690,19 @@ NTSTATUS OnDeviceControl(
 //
 // Helper functions
 //
+PVOID AllocateNonPagedPool(_In_ SIZE_T nPoolSize)
+{
+	PVOID pNonPagedPool = nullptr;
+
+	if (pExAllocatePool2)
+		pNonPagedPool = pExAllocatePool2(POOL_FLAG_NON_PAGED, nPoolSize, (ULONG)DRIVER_TAG);
+	else if (pExAllocatePoolWithTag)
+		pNonPagedPool = pExAllocatePoolWithTag(NonPagedPool, nPoolSize, (ULONG)DRIVER_TAG);
+
+	return pNonPagedPool;
+}
+
+
 PVOID GetKernelBase()
 {
 	NTSTATUS ntstatus = STATUS_INFO_LENGTH_MISMATCH;
@@ -673,8 +724,7 @@ PVOID GetKernelBase()
 
 	while (ntstatus == STATUS_INFO_LENGTH_MISMATCH)
 	{
-		pInfoBuffer = ::ExAllocatePool2(POOL_FLAG_NON_PAGED, nInfoLength, (ULONG)DRIVER_TAG);
-		// pInfoBuffer = ::ExAllocatePoolWithTag(NonPagedPool, nInfoLength, (ULONG)DRIVER_TAG);
+		pInfoBuffer = AllocateNonPagedPool(nInfoLength);
 
 		if (pInfoBuffer == nullptr)
 		{
@@ -902,7 +952,8 @@ PVOID GetZwCreateTokenBase()
 
 		for (auto idx = 0; idx < (nFunctionSize - 5); idx++)
 		{
-			if ((pFunctionBase[idx] != 0xB8) || (pFunctionBase[idx + 5] != 0xE9)) // mov eax, ??; jmp ??
+			// mov eax, ??; jmp nt!KiServiceInternal; ret
+			if ((pFunctionBase[idx] != 0xB8) || (pFunctionBase[idx + 5] != 0xE9) || (pFunctionBase[idx + 10] != 0xC3))
 				continue;
 
 			if (*(LONG*)&pFunctionBase[idx + 1] == nSyscallNumber)
@@ -917,8 +968,6 @@ PVOID GetZwCreateTokenBase()
 
 		nCount++;
 	}
-
-	KdPrint((DRIVER_PREFIX "ZwCreateToken is at 0x%p\n", (PVOID)pZwCreateToken));
 
 	return pZwCreateToken;
 }
@@ -956,20 +1005,13 @@ NTSTATUS CreateElavatedToken(_Out_ PHANDLE pTokenHandle)
 	OBJECT_ATTRIBUTES objectAttributes{ };
 	objectAttributes.Length = sizeof(OBJECT_ATTRIBUTES);
 
-	pTokenGroups = (PTOKEN_GROUPS)::ExAllocatePool2(
-		POOL_FLAG_NON_PAGED,
-		FIELD_OFFSET(TOKEN_GROUPS, Groups) + (sizeof(SID_AND_ATTRIBUTES) * 7),
-		(ULONG)DRIVER_TAG);
+	pTokenGroups = (PTOKEN_GROUPS)AllocateNonPagedPool(
+		FIELD_OFFSET(TOKEN_GROUPS, Groups) + (sizeof(SID_AND_ATTRIBUTES) * 7));
 
-	pTokenPrivileges = (PTOKEN_PRIVILEGES)::ExAllocatePool2(
-		POOL_FLAG_NON_PAGED,
-		FIELD_OFFSET(TOKEN_PRIVILEGES, Privileges) + (sizeof(LUID_AND_ATTRIBUTES) * 35),
-		(ULONG)DRIVER_TAG);
+	pTokenPrivileges = (PTOKEN_PRIVILEGES)AllocateNonPagedPool(
+		FIELD_OFFSET(TOKEN_PRIVILEGES, Privileges) + (sizeof(LUID_AND_ATTRIBUTES) * 35));
 
-	pDefaultDacl = (PACL)::ExAllocatePool2(
-		POOL_FLAG_NON_PAGED,
-		sizeof(ACL) + (SIZE_T)(nAceSize * 2),
-		(ULONG)DRIVER_TAG);
+	pDefaultDacl = (PACL)AllocateNonPagedPool(sizeof(ACL) + (SIZE_T)(nAceSize * 2));
 
 	if ((pTokenGroups == nullptr) || (pTokenPrivileges == nullptr) || (pDefaultDacl == nullptr))
 	{
