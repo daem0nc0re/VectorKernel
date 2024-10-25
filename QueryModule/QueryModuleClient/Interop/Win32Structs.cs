@@ -17,7 +17,7 @@ namespace QueryModuleClient.Interop
     {
         public AUX_MODULE_BASIC_INFO BasicInfo;
         public uint ImageSize;
-        public byte FileNameOffset;
+        public ushort FileNameOffset;
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 256)]
         public byte[] FullPathName;
     }

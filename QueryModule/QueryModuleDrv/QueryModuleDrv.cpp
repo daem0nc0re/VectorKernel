@@ -14,6 +14,26 @@
 #define IOCTL_QUERY_MODULE_INFO CTL_CODE(0x8000, 0x0500, METHOD_BUFFERED, FILE_ANY_ACCESS)
 
 //
+// Function type definition
+//
+typedef PVOID(NTAPI* PExAllocatePool2)(
+	_In_ POOL_FLAGS Flags,
+	_In_ SIZE_T NumberOfBytes,
+	_In_ ULONG Tag
+);
+typedef PVOID(NTAPI* PExAllocatePoolWithTag)(
+	_In_ __drv_strictTypeMatch(__drv_typeExpr)POOL_TYPE PoolType,
+	_In_ SIZE_T NumberOfBytes,
+	_In_ ULONG Tag
+);
+
+//
+// API address storage
+//
+PExAllocatePool2 pExAllocatePool2 = nullptr;
+PExAllocatePoolWithTag pExAllocatePoolWithTag = nullptr;
+
+//
 // Prototypes
 //
 void DriverUnload(_In_ PDRIVER_OBJECT DriverObject);
@@ -26,17 +46,11 @@ NTSTATUS OnDeviceControl(
 	_Inout_ PIRP Irp
 );
 NTSTATUS GetModuleInformation(_Inout_ PVOID* OutBuffer, _Inout_ ULONG* BufferSize);
-
+PVOID AllocateNonPagedPool(_In_ SIZE_T nPoolSize);
 
 //
 // Driver routines
 //
-
-// This module use ExAllocatePool2 API for memory allocation.
-// ExAllocatePool2 API was introduced from Windows 10 2004, so If you
-// try to load this module in older OSes, it will be failed.
-// If youw want to try this module older OS, change ExAllocatePool2 API
-// call to ExAllocatePoolWithTag API, and comment out this verification.
 extern "C"
 NTSTATUS DriverEntry(
 	_In_ PDRIVER_OBJECT  DriverObject,
@@ -56,6 +70,31 @@ NTSTATUS DriverEntry(
 	{
 		UNICODE_STRING devicePath = RTL_CONSTANT_STRING(DEVICE_PATH);
 		UNICODE_STRING symlinkPath = RTL_CONSTANT_STRING(SYMLINK_PATH);
+		UNICODE_STRING routineName{ 0 };
+
+		::RtlInitUnicodeString(&routineName, L"ExAllocatePool2");
+		pExAllocatePool2 = (PExAllocatePool2)::MmGetSystemRoutineAddress(&routineName);
+
+		if (pExAllocatePool2 == nullptr)
+		{
+			KdPrint((DRIVER_PREFIX "Failed to resolve ExAllocatePool2() API. Trying to resolve ExAllocatePoolWithTag() API.\n"));
+			::RtlInitUnicodeString(&routineName, L"ExAllocatePoolWithTag");
+			pExAllocatePoolWithTag = (PExAllocatePoolWithTag)::MmGetSystemRoutineAddress(&routineName);
+		}
+
+		if (pExAllocatePool2)
+		{
+			KdPrint((DRIVER_PREFIX "ExAllocatePool2() API is at 0x%p.\n", (PVOID)pExAllocatePool2));
+		}
+		else if (pExAllocatePoolWithTag)
+		{
+			KdPrint((DRIVER_PREFIX "ExAllocatePoolWithTag() API is at 0x%p.\n", (PVOID)pExAllocatePoolWithTag));
+		}
+		else
+		{
+			KdPrint((DRIVER_PREFIX "Failed to resolve ExAllocatePool2() API and ExAllocatePoolWithTag() API.\n"));
+			break;
+		}
 
 		ntstatus = ::IoCreateDevice(
 			DriverObject,
@@ -179,6 +218,18 @@ NTSTATUS OnDeviceControl(
 //
 // Helper functions
 //
+PVOID AllocateNonPagedPool(_In_ SIZE_T nPoolSize)
+{
+	// ExAllocatePool2 API was introduced from Windows 10 2004.
+	// Use ExAllocatePoolWithTag API on old OSes.
+	if (pExAllocatePool2)
+		return pExAllocatePool2(POOL_FLAG_NON_PAGED, nPoolSize, (ULONG)DRIVER_TAG);
+	else if (pExAllocatePoolWithTag)
+		return pExAllocatePoolWithTag(NonPagedPool, nPoolSize, (ULONG)DRIVER_TAG);
+	else
+		return nullptr;
+}
+
 NTSTATUS GetModuleInformation(_Inout_ PVOID *OutBuffer, _Inout_ ULONG *BufferSize)
 {
 	NTSTATUS ntstatus = STATUS_SUCCESS;
@@ -206,11 +257,7 @@ NTSTATUS GetModuleInformation(_Inout_ PVOID *OutBuffer, _Inout_ ULONG *BufferSiz
 			break;
 		}
 
-		// If you want to test this module in older OS, change this ExAllocatePool2 API 
-		// call as following:
-		//
-		// pInfouffer = ::ExAllocatePoolWithTag(PagedPool, nRequiredSize, (ULONG)DRIVER_TAG);
-		pInfoBuffer = ::ExAllocatePool2(POOL_FLAG_NON_PAGED, nRequiredSize, (ULONG)DRIVER_TAG);
+		pInfoBuffer = AllocateNonPagedPool(nRequiredSize);
 
 		if (pInfoBuffer == nullptr)
 		{

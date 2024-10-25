@@ -81,8 +81,10 @@ namespace QueryModuleClient.Library
                 else
                 {
                     IntPtr pInfoBuffer;
+                    IntPtr pNameBuffer;
                     var nInfoSize = (uint)Marshal.SizeOf(typeof(AUX_MODULE_EXTENDED_INFO));
                     var nEntries = (ioStatusBlock.Information.ToUInt32() / nInfoSize);
+                    var nNameOffset = Marshal.OffsetOf(typeof(AUX_MODULE_EXTENDED_INFO), "FullPathName").ToInt32();
                     var resultBuilder = new StringBuilder();
 
                     if (nEntries > 0)
@@ -110,28 +112,23 @@ namespace QueryModuleClient.Library
                     for (var idx = 0u; idx < nEntries; idx++)
                     {
                         if (Environment.Is64BitProcess)
+                        {
                             pInfoBuffer = new IntPtr(pOutBuffer.ToInt64() + ((int)nInfoSize * idx));
+                            pNameBuffer = new IntPtr(pInfoBuffer.ToInt64() + nNameOffset);
+                        }
                         else
+                        {
                             pInfoBuffer = new IntPtr(pOutBuffer.ToInt32() + ((int)nInfoSize * idx));
+                            pNameBuffer = new IntPtr(pInfoBuffer.ToInt32() + nNameOffset);
+                        }
 
                         var entry = (AUX_MODULE_EXTENDED_INFO)Marshal.PtrToStructure(
                             pInfoBuffer,
                             typeof(AUX_MODULE_EXTENDED_INFO));
-
-                        if (Environment.Is64BitProcess)
-                        {
-                            resultBuilder.AppendFormat(
-                                "0x{0} {1}\n",
-                                entry.BasicInfo.ImageBase.ToString("X16"),
-                                Encoding.ASCII.GetString(entry.FullPathName).TrimEnd('\0'));
-                        }
-                        else
-                        {
-                            resultBuilder.AppendFormat(
-                                "0x{0} {1}\n",
-                                entry.BasicInfo.ImageBase.ToString("X8"),
-                                Encoding.ASCII.GetString(entry.FullPathName).TrimEnd('\0'));
-                        }
+                        resultBuilder.AppendFormat(
+                            "0x{0} {1}\n",
+                            entry.BasicInfo.ImageBase.ToString(Environment.Is64BitProcess ? "X16" : "X8"),
+                            Marshal.PtrToStringAnsi(pNameBuffer));
                     }
 
                     Console.WriteLine(resultBuilder.ToString());
