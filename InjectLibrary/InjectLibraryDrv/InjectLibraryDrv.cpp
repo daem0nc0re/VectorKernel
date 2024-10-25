@@ -645,14 +645,14 @@ NTSTATUS OnDeviceControl(
 //
 PVOID AllocateNonPagedPool(_In_ SIZE_T nPoolSize)
 {
-	PVOID pNonPagedPool = nullptr;
-
+	// ExAllocatePool2 API was introduced from Windows 10 2004.
+	// Use ExAllocatePoolWithTag API on old OSes.
 	if (pExAllocatePool2)
-		pNonPagedPool = pExAllocatePool2(POOL_FLAG_NON_PAGED, nPoolSize, (ULONG)DRIVER_TAG);
+		return pExAllocatePool2(POOL_FLAG_NON_PAGED, nPoolSize, (ULONG)DRIVER_TAG);
 	else if (pExAllocatePoolWithTag)
-		pNonPagedPool = pExAllocatePoolWithTag(NonPagedPool, nPoolSize, (ULONG)DRIVER_TAG);
-
-	return pNonPagedPool;
+		return pExAllocatePoolWithTag(NonPagedPool, nPoolSize, (ULONG)DRIVER_TAG);
+	else
+		return nullptr;
 }
 
 

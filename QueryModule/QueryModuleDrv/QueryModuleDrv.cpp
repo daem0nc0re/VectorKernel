@@ -6,8 +6,6 @@
 #define SYMLINK_PATH L"\\??\\QueryModule"
 #define DRIVER_TAG 'lnKV'
 
-#pragma warning(disable: 4996) // This warning is caused when use old ExAllocatePoolWithTag() API.
-
 //
 // Ioctl code definition
 //
