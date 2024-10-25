@@ -2,13 +2,7 @@
 
 PoCs for Kernelmode rootkit techniques research or education.
 Currently focusing on Windows OS.
-All modules support 64bit OS only.
-
-> __NOTE__
->
-> Some modules use `ExAllocatePool2` API to allocate kernel pool memory.
-> `ExAllocatePool2` API is not supported in OSes older than Windows 10 Version 2004.
-> If you want to test the modules in old OSes, replace `ExAllocatePool2` API with `ExAllocatePoolWithTag` API.
+All modules support x64 family 64bit OS only.
 
 
 ## Environment
