@@ -950,7 +950,7 @@ PVOID GetZwCreateTokenBase()
 
 		for (auto idx = 0; idx < (nFunctionSize - 5); idx++)
 		{
-			// mov eax, ??; jmp nt!KiServiceInternal; ret
+			// mov eax, nSyscallNumber; jmp nt!KiServiceInternal; ret
 			if ((pFunctionBase[idx] != 0xB8) || (pFunctionBase[idx + 5] != 0xE9) || (pFunctionBase[idx + 10] != 0xC3))
 				continue;
 
