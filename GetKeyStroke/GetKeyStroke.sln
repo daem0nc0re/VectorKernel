@@ -1,0 +1,54 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.12.35527.113 d17.12
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GetKeyStrokeDrv", "GetKeyStrokeDrv\GetKeyStrokeDrv.vcxproj", "{03A7738A-C36C-48A1-A72F-094E625A56D0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GetKeyStrokeClient", "GetKeyStrokeClient\GetKeyStrokeClient.csproj", "{24493029-56D8-435A-BD52-3E16181F7418}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|ARM64 = Debug|ARM64
+		Debug|x64 = Debug|x64
+		Release|Any CPU = Release|Any CPU
+		Release|ARM64 = Release|ARM64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{03A7738A-C36C-48A1-A72F-094E625A56D0}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{03A7738A-C36C-48A1-A72F-094E625A56D0}.Debug|Any CPU.Build.0 = Debug|x64
+		{03A7738A-C36C-48A1-A72F-094E625A56D0}.Debug|Any CPU.Deploy.0 = Debug|x64
+		{03A7738A-C36C-48A1-A72F-094E625A56D0}.Debug|ARM64.ActiveCfg = Debug|ARM64
+		{03A7738A-C36C-48A1-A72F-094E625A56D0}.Debug|ARM64.Build.0 = Debug|ARM64
+		{03A7738A-C36C-48A1-A72F-094E625A56D0}.Debug|ARM64.Deploy.0 = Debug|ARM64
+		{03A7738A-C36C-48A1-A72F-094E625A56D0}.Debug|x64.ActiveCfg = Debug|x64
+		{03A7738A-C36C-48A1-A72F-094E625A56D0}.Debug|x64.Build.0 = Debug|x64
+		{03A7738A-C36C-48A1-A72F-094E625A56D0}.Debug|x64.Deploy.0 = Debug|x64
+		{03A7738A-C36C-48A1-A72F-094E625A56D0}.Release|Any CPU.ActiveCfg = Release|x64
+		{03A7738A-C36C-48A1-A72F-094E625A56D0}.Release|Any CPU.Build.0 = Release|x64
+		{03A7738A-C36C-48A1-A72F-094E625A56D0}.Release|Any CPU.Deploy.0 = Release|x64
+		{03A7738A-C36C-48A1-A72F-094E625A56D0}.Release|ARM64.ActiveCfg = Release|ARM64
+		{03A7738A-C36C-48A1-A72F-094E625A56D0}.Release|ARM64.Build.0 = Release|ARM64
+		{03A7738A-C36C-48A1-A72F-094E625A56D0}.Release|ARM64.Deploy.0 = Release|ARM64
+		{03A7738A-C36C-48A1-A72F-094E625A56D0}.Release|x64.ActiveCfg = Release|x64
+		{03A7738A-C36C-48A1-A72F-094E625A56D0}.Release|x64.Build.0 = Release|x64
+		{03A7738A-C36C-48A1-A72F-094E625A56D0}.Release|x64.Deploy.0 = Release|x64
+		{24493029-56D8-435A-BD52-3E16181F7418}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{24493029-56D8-435A-BD52-3E16181F7418}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{24493029-56D8-435A-BD52-3E16181F7418}.Debug|ARM64.ActiveCfg = Debug|Any CPU
+		{24493029-56D8-435A-BD52-3E16181F7418}.Debug|ARM64.Build.0 = Debug|Any CPU
+		{24493029-56D8-435A-BD52-3E16181F7418}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{24493029-56D8-435A-BD52-3E16181F7418}.Debug|x64.Build.0 = Debug|Any CPU
+		{24493029-56D8-435A-BD52-3E16181F7418}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{24493029-56D8-435A-BD52-3E16181F7418}.Release|Any CPU.Build.0 = Release|Any CPU
+		{24493029-56D8-435A-BD52-3E16181F7418}.Release|ARM64.ActiveCfg = Release|Any CPU
+		{24493029-56D8-435A-BD52-3E16181F7418}.Release|ARM64.Build.0 = Release|Any CPU
+		{24493029-56D8-435A-BD52-3E16181F7418}.Release|x64.ActiveCfg = Release|Any CPU
+		{24493029-56D8-435A-BD52-3E16181F7418}.Release|x64.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
