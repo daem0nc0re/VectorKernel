@@ -13,6 +13,7 @@ PS C:\> sc.exe start GetKeyStroke
 
 `GetKeyStrokeDrv.sys` stores logged keyboard actions to `C:\keystroke.bin`, and client program read and parse it.
 If `C:\keystroke.bin` was not found, this client program wait for log file creation by the kernel driver.
+Key code mean depends on testing envrionment, so I don't add key code parse procedure to this client program.
 Simply execute as follows:
 
 ```
