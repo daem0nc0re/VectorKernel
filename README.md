@@ -30,6 +30,7 @@ All modules are tested in Windows 11.
 | [DropProcAccess](./DropProcAccess/) | PoCs to drop process handle access with Object Notify Callback. |
 | [ElevateHandle](./ElevateHandle/) | PoCs to elevate handle access with DKOM method. |
 | [GetFullPrivs](./GetFullPrivs/) | PoCs to get full privileges with DKOM method. |
+| [GetKeyStroke](./GetKeyStroke/) | PoCs to log keyboard action with kernel driver. |
 | [GetProcHandle](./GetProcHandle/) | PoCs to get full access process handle from kernelmode. |
 | [InjectLibrary](./InjectLibrary/) | PoCs to perform DLL injection with Kernel APC Injection method. |
 | [ModHide](./ModHide/) | PoCs to hide loaded kernel drivers with DKOM method. |
