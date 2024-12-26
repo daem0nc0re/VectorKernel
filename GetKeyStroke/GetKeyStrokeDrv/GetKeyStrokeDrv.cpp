@@ -324,6 +324,8 @@ NTSTATUS ReadCompletionRoutine(
 			::KeQuerySystemTimePrecise(&pInputData->Keystroke.TimeStamp);
 			RtlCopyMemory(&pInputData->Keystroke.KeyboardInput, &pKeyboardInput[idx], sizeof(KEYBOARD_INPUT_DATA));
 			::KeReleaseSemaphore(&pDeviceExtension->Semaphore, 0, 1, FALSE);
+
+			KdPrint((DRIVER_PREFIX "Captured key code 0x%04X.\n", pKeyboardInput[idx].MakeCode));
 		}
 	}
 
@@ -393,7 +395,16 @@ VOID LoggerThreadRoutine(_In_ PVOID /* PDEVICE_EXTENSION */ pContext)
 
 			if (!NT_SUCCESS(ntstatus))
 			{
-				KdPrint((DRIVER_PREFIX "Failed to write keystroke data to %ws (NTSTATUS = 0x%08X).\n", LOGFILE_PATH, ntstatus));
+				KdPrint((DRIVER_PREFIX "Failed to write key code data 0x%04X to %ws (NTSTATUS = 0x%08X).\n",
+					((PKEYBOARD_INPUT_ENTRY)pBufferToFree)->Keystroke.KeyboardInput.MakeCode,
+					LOGFILE_PATH,
+					ntstatus));
+			}
+			else
+			{
+				KdPrint((DRIVER_PREFIX "Key code data 0x%04X is written in %ws successfully.\n",
+					((PKEYBOARD_INPUT_ENTRY)pBufferToFree)->Keystroke.KeyboardInput.MakeCode,
+					LOGFILE_PATH));
 			}
 
 			::ExInterlockedRemoveHeadList(pListHead, &pDeviceExtension->SpinLock);
