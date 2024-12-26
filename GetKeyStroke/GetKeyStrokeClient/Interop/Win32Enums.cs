@@ -144,15 +144,6 @@ namespace GetKeyStrokeClient.Interop
         STRUCTURED_STORAGE = 0x00000441
     }
 
-    internal enum FILE_ACTION
-    {
-        Added = 1,
-        Removed,
-        Modified,
-        RenamedOldName,
-        RenamedNewName
-    }
-
     internal enum FILE_CREATE_DISPOSITION : uint
     {
         SUPERSEDE = 0,
@@ -313,17 +304,5 @@ namespace GetKeyStrokeClient.Interop
         IgnoreImpersonatedDevicemap = 0x00000800,
         DontReparse = 0x00001000,
         ValieAttributes = 0x00001FF2
-    }
-
-    internal enum OBJECT_INFORMATION_CLASS
-    {
-        ObjectBasicInformation, // q: OBJECT_BASIC_INFORMATION
-        ObjectNameInformation, // q: OBJECT_NAME_INFORMATION
-        ObjectTypeInformation, // q: OBJECT_TYPE_INFORMATION
-        ObjectTypesInformation, // q: OBJECT_TYPES_INFORMATION
-        ObjectHandleFlagInformation, // qs: OBJECT_HANDLE_FLAG_INFORMATION
-        ObjectSessionInformation, // s: void // change object session // (requires SeTcbPrivilege)
-        ObjectSessionObjectInformation, // s: void // change object session // (requires SeTcbPrivilege)
-        MaxObjectInfoClass
     }
 }

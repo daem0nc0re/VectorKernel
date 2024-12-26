@@ -142,6 +142,8 @@ namespace GetKeyStrokeClient.Library
 
                         ntstatus = NativeMethods.NtWaitForSingleObject(Globals.StopEvent, BOOLEAN.FALSE, in timeout);
                     } while (ntstatus == Win32Consts.STATUS_TIMEOUT);
+
+                    NativeMethods.NtClose(Globals.StopEvent);
                 } while (false);
 
                 NativeMethods.NtClose(hDirectory);

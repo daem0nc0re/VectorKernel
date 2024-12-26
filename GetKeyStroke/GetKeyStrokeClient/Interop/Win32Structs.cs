@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -26,16 +25,6 @@ namespace GetKeyStrokeClient.Interop
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    internal struct FILE_NOTIFY_INFORMATION
-    {
-        public int NextEntryOffset;
-        public FILE_ACTION Action;
-        public int FileNameLength;
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 1)]
-        public ushort[] FileName;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
     internal struct FILE_STANDARD_INFORMATION
     {
         public LARGE_INTEGER AllocationSize;
@@ -43,15 +32,6 @@ namespace GetKeyStrokeClient.Interop
         public uint NumberOfLinks;
         public BOOLEAN DeletePending;
         public BOOLEAN Directory;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    internal struct GENERIC_MAPPING
-    {
-        public ACCESS_MASK GenericRead;
-        public ACCESS_MASK GenericWrite;
-        public ACCESS_MASK GenericExecute;
-        public ACCESS_MASK GenericAll;
     }
 
     [StructLayout(LayoutKind.Sequential)]

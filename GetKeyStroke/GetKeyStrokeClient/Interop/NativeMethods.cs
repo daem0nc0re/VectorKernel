@@ -54,18 +54,6 @@ namespace GetKeyStrokeClient.Interop
             out IO_STATUS_BLOCK IoStatusBlock,
             IntPtr Buffer,
             uint Length,
-            IntPtr /* PLARGE_INTEGER */ ByteOffset,
-            IntPtr /* PULONG */ Key);
-
-        [DllImport("ntdll.dll")]
-        public static extern NTSTATUS NtReadFile(
-            IntPtr FileHandle,
-            IntPtr Event,
-            IntPtr /* PIO_APC_ROUTINE */ ApcRoutine,
-            IntPtr ApcContext,
-            out IO_STATUS_BLOCK IoStatusBlock,
-            IntPtr Buffer,
-            uint Length,
             in LARGE_INTEGER ByteOffset,
             IntPtr /* PULONG */ Key);
 
@@ -85,12 +73,6 @@ namespace GetKeyStrokeClient.Interop
         public static extern NTSTATUS NtSetEvent(
             IntPtr EventHandle,
             out uint PreviousState);
-
-        [DllImport("ntdll.dll")]
-        public static extern NTSTATUS NtWaitForSingleObject(
-            IntPtr Handle,
-            BOOLEAN Alertable,
-            IntPtr Timeout);
 
         [DllImport("ntdll.dll")]
         public static extern NTSTATUS NtWaitForSingleObject(
