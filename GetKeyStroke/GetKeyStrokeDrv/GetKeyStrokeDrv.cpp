@@ -147,10 +147,11 @@ NTSTATUS DriverEntry(
 			nullptr,
 			FILE_ATTRIBUTE_NORMAL,
 			FILE_SHARE_READ,
-			FILE_OPEN_IF,
+			FILE_SUPERSEDE,
 			FILE_NON_DIRECTORY_FILE | FILE_SYNCHRONOUS_IO_NONALERT,
 			nullptr,
 			NULL);
+		KdPrint((DRIVER_PREFIX "ZwCreateFile returned 0x%08X\n", ntstatus));
 
 		if (!NT_SUCCESS(ntstatus))
 		{

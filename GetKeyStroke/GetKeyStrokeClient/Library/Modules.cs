@@ -57,7 +57,7 @@ namespace GetKeyStrokeClient.Library
                     }
 
                     using (var objectAttributes = new OBJECT_ATTRIBUTES(
-                        @"\??\C:\keystroke.bin",
+                        string.Format(@"\??\{0}", logFilePath),
                         OBJECT_ATTRIBUTES_FLAGS.CaseInsensitive))
                     {
                         ntstatus = NativeMethods.NtCreateFile(
@@ -138,6 +138,11 @@ namespace GetKeyStrokeClient.Library
 
                             Marshal.FreeHGlobal(pDataBuffer);
                             nCurrentOffset += nDataSize;
+                        }
+                        else if (nLogFileSize < nCurrentOffset)
+                        {
+                            Console.WriteLine("[!] {0} is updated or removed.", logFilePath);
+                            NativeMethods.NtSetEvent(Globals.StopEvent, out uint _);
                         }
 
                         ntstatus = NativeMethods.NtWaitForSingleObject(Globals.StopEvent, BOOLEAN.FALSE, in timeout);
