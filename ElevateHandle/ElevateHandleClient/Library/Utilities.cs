@@ -50,7 +50,7 @@ namespace ElevateHandleClient.Library
 
             using (var objectAttributes = new OBJECT_ATTRIBUTES(
                    keyName,
-                   OBJECT_ATTRIBUTES_FLAGS.OBJ_CASE_INSENSITIVE))
+                   OBJECT_ATTRIBUTES_FLAGS.CaseInsensitive))
             {
                 NTSTATUS ntstatus = NativeMethods.NtOpenKey(
                     out hKey,

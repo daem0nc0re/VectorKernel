@@ -23,7 +23,7 @@ namespace ProcProtectClient.Library
 
                 using (var objectAttributes = new OBJECT_ATTRIBUTES(
                     Globals.SYMLINK_PATH,
-                    OBJECT_ATTRIBUTES_FLAGS.OBJ_CASE_INSENSITIVE))
+                    OBJECT_ATTRIBUTES_FLAGS.CaseInsensitive))
                 {
                     ntstatus = NativeMethods.NtCreateFile(
                         out hDevice,
@@ -160,7 +160,7 @@ namespace ProcProtectClient.Library
 
                 using (var objectAttributes = new OBJECT_ATTRIBUTES(
                     Globals.SYMLINK_PATH,
-                    OBJECT_ATTRIBUTES_FLAGS.OBJ_CASE_INSENSITIVE))
+                    OBJECT_ATTRIBUTES_FLAGS.CaseInsensitive))
                 {
                     ntstatus = NativeMethods.NtCreateFile(
                         out hDevice,
