@@ -420,12 +420,19 @@ VOID LoggerThreadRoutine(_In_ PVOID /* PDEVICE_EXTENSION */ pContext)
 //
 PVOID AllocateNonPagedPool(_In_ SIZE_T nPoolSize)
 {
+	PVOID pNonPagedPool = nullptr;
+
 	// ExAllocatePool2 API was introduced from Windows 10 2004.
 	// Use ExAllocatePoolWithTag API on old OSes.
 	if (pExAllocatePool2)
-		return pExAllocatePool2(POOL_FLAG_NON_PAGED, nPoolSize, (ULONG)DRIVER_TAG);
+	{
+		pNonPagedPool = pExAllocatePool2(POOL_FLAG_NON_PAGED, nPoolSize, (ULONG)DRIVER_TAG);
+	}
 	else if (pExAllocatePoolWithTag)
-		return pExAllocatePoolWithTag(NonPagedPool, nPoolSize, (ULONG)DRIVER_TAG);
-	else
-		return nullptr;
+	{
+		pNonPagedPool = pExAllocatePoolWithTag(NonPagedPool, nPoolSize, (ULONG)DRIVER_TAG);
+		RtlZeroMemory(pNonPagedPool, nPoolSize);
+	}
+
+	return pNonPagedPool;
 }
