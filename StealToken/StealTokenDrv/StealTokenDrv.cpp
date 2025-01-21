@@ -185,6 +185,11 @@ NTSTATUS DriverEntry(
 					// For Windows 11 23H2
 					g_TokenOffset = 0x4B8u;
 				}
+				else if (versionInfo.dwBuildNumber == 26100)
+				{
+					// For Windows 11 24H2
+					g_TokenOffset = 0x248u;
+				}
 				else
 				{
 					ntstatus = STATUS_NOT_SUPPORTED;

@@ -259,6 +259,13 @@ NTSTATUS DriverEntry(
 					g_NextHandleNeedingPoolOffset = 0u;
 					g_TableCodeOffset = 0x8u;
 				}
+				else if (versionInfo.dwBuildNumber == 26100)
+				{
+					// For Windows 11 24H2
+					g_ObjectTableOffset = 0x300u;
+					g_NextHandleNeedingPoolOffset = 0u;
+					g_TableCodeOffset = 0x8u;
+				}
 				else
 				{
 					ntstatus = STATUS_NOT_SUPPORTED;

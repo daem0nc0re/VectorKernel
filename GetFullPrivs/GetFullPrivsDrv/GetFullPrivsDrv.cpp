@@ -140,7 +140,7 @@ NTSTATUS DriverEntry(
 			}
 			else if (versionInfo.dwMajorVersion == 10)
 			{
-				// From Windows 10 1509 to Windows 11 23H2
+				// From Windows 10 1509 to Windows 11 24H2
 				g_PrivilegesOffset = 0x40u;
 				g_UserAndGroupCountOffset = 0x7Cu;
 				g_UserAndGroupsOffset = 0x98u;

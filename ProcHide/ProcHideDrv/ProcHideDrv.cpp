@@ -194,6 +194,12 @@ NTSTATUS DriverEntry(
 					g_UniqueProcessIdOffset = 0x440u;
 					g_ActiveProcessLinksOffset = 0x448u;
 				}
+				else if (versionInfo.dwBuildNumber == 26100)
+				{
+					// For Windows 11 24H2
+					g_UniqueProcessIdOffset = 0x1D0u;
+					g_ActiveProcessLinksOffset = 0x1D8u;
+				}
 				else
 				{
 					ntstatus = STATUS_NOT_SUPPORTED;
