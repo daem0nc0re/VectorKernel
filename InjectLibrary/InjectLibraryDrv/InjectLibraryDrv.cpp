@@ -656,7 +656,9 @@ PVOID AllocateNonPagedPool(_In_ SIZE_T nPoolSize)
 	else if (pExAllocatePoolWithTag)
 	{
 		pNonPagedPool = pExAllocatePoolWithTag(NonPagedPool, nPoolSize, (ULONG)DRIVER_TAG);
-		RtlZeroMemory(pNonPagedPool, nPoolSize);
+
+		if (pNonPagedPool)
+			RtlZeroMemory(pNonPagedPool, nPoolSize);
 	}
 
 	return pNonPagedPool;
