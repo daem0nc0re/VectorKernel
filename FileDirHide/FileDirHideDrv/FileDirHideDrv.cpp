@@ -521,7 +521,7 @@ NTSTATUS RegisterFileDirectoryEntry(
 		::InsertTailList(&g_Manager.ListHead, &pEntryBuffer->ListEntry);
 		g_Manager.IndexOccupiedStatus[nEntryIndex] = TRUE;
 		g_Manager.EntryCount++;
-		KdPrint((DRIVER_PREFIX "An entry is registered successfuly (Index = %u, Path = %wZ).\n",
+		KdPrint((DRIVER_PREFIX "An entry is registered successfully (Index = %u, Path = %wZ).\n",
 			nEntryIndex,
 			&pEntryBuffer->Path));
 	} while (false);
@@ -586,7 +586,7 @@ NTSTATUS RemoveFileDirectoryEntry(_In_ ULONG IndexToRemove)
 		::ExFreePoolWithTag(pCurrentEntry, DRIVER_TAG);
 		g_Manager.IndexOccupiedStatus[nEntryIndex] = FALSE;
 		g_Manager.EntryCount--;
-		KdPrint((DRIVER_PREFIX "An entry is removed successfuly (Index = %u).\n", nEntryIndex));
+		KdPrint((DRIVER_PREFIX "An entry is removed successfully (Index = %u).\n", nEntryIndex));
 	} while (false);
 
 	::ExReleaseFastMutex(&g_Manager.FastMutex);
