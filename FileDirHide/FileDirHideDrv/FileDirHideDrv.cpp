@@ -514,7 +514,7 @@ NTSTATUS RegisterFileDirectoryEntry(
 		pEntryBuffer->Path.Length = (USHORT)PathBytesLength;
 		pEntryBuffer->Path.MaximumLength = (USHORT)(nEntrySize - FIELD_OFFSET(HIDE_ENTRY, PathBytes));
 		pEntryBuffer->Path.Buffer = (PWCHAR)&pEntryBuffer->PathBytes;
-		::memcpy(pEntryBuffer->Path.Buffer, Path, PathBytesLength);
+		::memcpy(pEntryBuffer->Path.Buffer, Path, pEntryBuffer->Path.Length);
 		pEntryBuffer->ParentPathLength = GetParentDirectoryPathLength(pEntryBuffer->Path.Buffer);
 
 		// Link HIDE_ENTRY struct
