@@ -727,6 +727,10 @@ FLT_POSTOP_CALLBACK_STATUS OnPostDirectoryControl(
 					break;
 
 				auto pNameToHide = (PWSTR)((ULONG_PTR)pPathToHide[nIndex]->Path.Buffer + pPathToHide[nIndex]->ParentPathLength);
+				auto nHideNameLength = (ULONG)(pPathToHide[nIndex]->Path.Length - (USHORT)pPathToHide[nIndex]->ParentPathLength);
+
+				if (nHideNameLength != nFileNameLength)
+					continue;
 
 				if (::_wcsnicmp(pNameToHide, filename, nFileNameLength / sizeof(WCHAR)) == 0)
 				{
