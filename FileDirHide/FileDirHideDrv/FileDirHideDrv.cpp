@@ -84,7 +84,7 @@ NTSTATUS RegisterFileDirectoryEntry(
 	_In_ ULONG PathBytesLength,
 	_Out_ PULONG RegisteredIndex
 );
-VOID RemoveAllFileDierctoryEntries();
+VOID RemoveAllFileDirectoryEntries();
 NTSTATUS RemoveFileDirectoryEntry(_In_ ULONG IndexToRemove);
 NTSTATUS InitMiniFilter(
 	_In_ PDRIVER_OBJECT DriverObject,
@@ -348,7 +348,7 @@ NTSTATUS OnDeviceControl(
 	}
 	case IOCTL_REMOVE_ALL_REGISTERED_FILEDIR:
 	{
-		RemoveAllFileDierctoryEntries();
+		RemoveAllFileDirectoryEntries();
 		ntstatus = STATUS_SUCCESS;
 
 		KdPrint((DRIVER_PREFIX "IOCTL_REMOVE_ALL_REGISTERED_FILEDIR: NTSTATUS = 0x%08X.\n", ntstatus));
@@ -533,7 +533,7 @@ NTSTATUS RegisterFileDirectoryEntry(
 }
 
 
-VOID RemoveAllFileDierctoryEntries()
+VOID RemoveAllFileDirectoryEntries()
 {
 	::ExAcquireFastMutex(&g_Manager.FastMutex);
 
@@ -627,7 +627,7 @@ NTSTATUS FilterUnload(FLT_FILTER_UNLOAD_FLAGS Flags)
 	UNREFERENCED_PARAMETER(Flags);
 	UNICODE_STRING symLink = RTL_CONSTANT_STRING(SYMLINK_PATH);
 
-	RemoveAllFileDierctoryEntries();
+	RemoveAllFileDirectoryEntries();
 	::FltUnregisterFilter(g_Manager.Filter);
 	::IoDeleteSymbolicLink(&symLink);
 	::IoDeleteDevice(g_Manager.DriverObject->DeviceObject);
