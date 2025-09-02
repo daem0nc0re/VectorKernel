@@ -461,6 +461,9 @@ NTSTATUS RegisterFileDirectoryEntry(
 	if (RegisteredIndex == nullptr)
 		return STATUS_INVALID_PARAMETER;
 
+	if (PathBytesLength > MAXUINT16)
+		return STATUS_NAME_TOO_LONG;
+
 	::ExAcquireFastMutex(&g_Manager.FastMutex);
 
 	do
