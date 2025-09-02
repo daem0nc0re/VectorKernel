@@ -297,8 +297,16 @@ NTSTATUS OnDeviceControl(
 	{
 		PVOID pOutputBuffer = Irp->AssociatedIrp.SystemBuffer;
 		ULONG nOutputBufferLength = dic.OutputBufferLength;
-		ntstatus = ListFileDirectoryEntry(pOutputBuffer, &nOutputBufferLength);
-		info = nOutputBufferLength;
+
+		if (pOutputBuffer == nullptr)
+		{
+			ntstatus = STATUS_INVALID_PARAMETER;
+		}
+		else
+		{
+			ntstatus = ListFileDirectoryEntry(pOutputBuffer, &nOutputBufferLength);
+			info = nOutputBufferLength;
+		}
 
 		KdPrint((DRIVER_PREFIX "IOCTL_LIST_REGISTERED_FILEDIR: NTSTATUS = 0x%08X.\n", ntstatus));
 
@@ -312,7 +320,11 @@ NTSTATUS OnDeviceControl(
 		ULONG nOutputBufferLength = dic.OutputBufferLength;
 		REGISTER_FILEDIR_ENTRY_OUTPUT registerOutput = { 0 };
 
-		if (nOutputBufferLength < sizeof(REGISTER_FILEDIR_ENTRY_OUTPUT))
+		if (pRegisterInput == nullptr)
+		{
+			ntstatus = STATUS_INVALID_PARAMETER;
+		}
+		else if (nOutputBufferLength < sizeof(REGISTER_FILEDIR_ENTRY_OUTPUT))
 		{
 			ntstatus = STATUS_BUFFER_TOO_SMALL;
 		}
@@ -345,8 +357,12 @@ NTSTATUS OnDeviceControl(
 	}
 	case IOCTL_REMOVE_REGISTERED_FILEDIR:
 	{
-		auto removeInput = (PREMOVE_FILEDIR_ENTRY_INPUT)Irp->AssociatedIrp.SystemBuffer;
-		ntstatus = RemoveFileDirectoryEntry(removeInput->Index);
+		auto pRemoveInput = (PREMOVE_FILEDIR_ENTRY_INPUT)Irp->AssociatedIrp.SystemBuffer;
+
+		if (pRemoveInput == nullptr)
+			ntstatus = STATUS_INVALID_PARAMETER;
+		else
+			ntstatus = RemoveFileDirectoryEntry(pRemoveInput->Index);
 
 		KdPrint((DRIVER_PREFIX "IOCTL_REMOVE_REGISTERED_FILEDIR: NTSTATUS = 0x%08X.\n", ntstatus));
 
