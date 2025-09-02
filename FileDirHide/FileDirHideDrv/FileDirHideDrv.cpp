@@ -891,13 +891,13 @@ NTSTATUS SetMiniFilterRegistry(
 	if (DefaultInstanceValue->Length > (sizeof(instanceName) - sizeof(WCHAR)))
 	{
 		KdPrint((DRIVER_PREFIX "DefaultInstance value for registry is too long.\n"));
-		return STATUS_INVALID_PARAMETER;
+		return STATUS_NAME_TOO_LONG;
 	}
 
 	if (AltitudeValue->Length > (sizeof(altitude) - sizeof(WCHAR)))
 	{
 		KdPrint((DRIVER_PREFIX "Altitude value for registry is too long.\n"));
-		return STATUS_INVALID_PARAMETER;
+		return STATUS_NAME_TOO_LONG;
 	}
 
 	::memcpy(instanceName, DefaultInstanceValue->Buffer, DefaultInstanceValue->Length);
