@@ -887,21 +887,23 @@ NTSTATUS SetMiniFilterRegistry(
 	NTSTATUS ntstatus = STATUS_UNSUCCESSFUL;
 	WCHAR instanceName[128] = { 0 };
 	WCHAR altitude[16] = { 0 };
+	USHORT nInstanceLength = DefaultInstanceValue->Length;
+	USHORT nAltitudeLength = AltitudeValue->Length;
 
-	if (DefaultInstanceValue->Length > (sizeof(instanceName) - sizeof(WCHAR)))
+	if (nInstanceLength > (USHORT)(sizeof(instanceName) - sizeof(WCHAR)))
 	{
 		KdPrint((DRIVER_PREFIX "DefaultInstance value for registry is too long.\n"));
 		return STATUS_NAME_TOO_LONG;
 	}
 
-	if (AltitudeValue->Length > (sizeof(altitude) - sizeof(WCHAR)))
+	if (nAltitudeLength > (USHORT)(sizeof(altitude) - sizeof(WCHAR)))
 	{
 		KdPrint((DRIVER_PREFIX "Altitude value for registry is too long.\n"));
 		return STATUS_NAME_TOO_LONG;
 	}
 
-	::memcpy(instanceName, DefaultInstanceValue->Buffer, DefaultInstanceValue->Length);
-	::memcpy(altitude, AltitudeValue->Buffer, AltitudeValue->Length);
+	::memcpy(instanceName, DefaultInstanceValue->Buffer, nInstanceLength);
+	::memcpy(altitude, AltitudeValue->Buffer, nAltitudeLength);
 
 	do
 	{
@@ -949,7 +951,7 @@ NTSTATUS SetMiniFilterRegistry(
 			0,
 			REG_SZ,
 			instanceName,
-			DefaultInstanceValue->Length + sizeof(WCHAR));
+			nInstanceLength + sizeof(WCHAR));
 
 		if (!NT_SUCCESS(ntstatus))
 			break;
@@ -983,7 +985,7 @@ NTSTATUS SetMiniFilterRegistry(
 				0,
 				REG_SZ,
 				altitude,
-				AltitudeValue->Length + sizeof(WCHAR));
+				nAltitudeLength + sizeof(WCHAR));
 
 			if (!NT_SUCCESS(ntstatus))
 				break;
