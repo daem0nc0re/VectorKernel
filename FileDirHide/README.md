@@ -1,6 +1,6 @@
 # FileDirHide
 
-PoC to hide file/directory.
+PoCs to hide file/directory.
 
 ## Installation
 ```

@@ -29,6 +29,7 @@ All modules are tested in Windows 11.
 | [CreateToken](./CreateToken/) | PoCs to get full privileged SYSTEM token with `ZwCreateToken()` API. |
 | [DropProcAccess](./DropProcAccess/) | PoCs to drop process handle access with Object Notify Callback. |
 | [ElevateHandle](./ElevateHandle/) | PoCs to elevate handle access with DKOM method. |
+| [FileDirHide](./FileDirHide/) | PoCs to hide file/directory. |
 | [GetFullPrivs](./GetFullPrivs/) | PoCs to get full privileges with DKOM method. |
 | [GetKeyStroke](./GetKeyStroke/) | PoCs to log keyboard action with kernel driver. |
 | [GetProcHandle](./GetProcHandle/) | PoCs to get full access process handle from kernelmode. |
