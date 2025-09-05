@@ -109,7 +109,8 @@ typedef struct _BLOCK_IMAGE_MANAGER
 
 typedef struct _BLOCK_IMAGE_INFO
 {
-	WCHAR ImageFileName[MAXIMUM_BLOCKNAME_LENGTH];
+	ULONG NameBytesLength;
+	WCHAR ImageFileName[ANY_SIZE];
 } BLOCK_IMAGE_INFO, *PBLOCK_IMAGE_INFO;
 
 //
@@ -314,32 +315,29 @@ NTSTATUS SetImageBlockRoutine(
 	_Out_ PULONG_PTR Information)
 {
 	NTSTATUS ntstatus = STATUS_SUCCESS;
-	USHORT nNameLength = 0;
+	ULONG nNameBytesLength = 0;
+	ULONG nMinimumLength = FIELD_OFFSET(BLOCK_IMAGE_INFO, NameBytesLength);
 	*Information = NULL;
 
 	if (ImageName == nullptr)
 		return STATUS_INVALID_ADDRESS;
-	else if (InputLength > sizeof(BLOCK_IMAGE_INFO))
+	else if (InputLength < nMinimumLength)
+		return STATUS_BUFFER_TOO_SMALL;
+
+	nNameBytesLength = ImageName->NameBytesLength;
+
+	if (nNameBytesLength > MAXIMUM_BLOCKNAME_LENGTH * sizeof(WCHAR))
 		return STATUS_NAME_TOO_LONG;
-	else if (InputLength < sizeof(BLOCK_IMAGE_INFO))
+	else if (InputLength < nMinimumLength + nNameBytesLength)
 		return STATUS_BUFFER_TOO_SMALL;
 
 	::ExAcquireFastMutex(&g_Manager.FastMutex);
 	::memset(&g_Manager.NameBuffer, 0, sizeof(g_Manager.NameBuffer));
-
-	for (auto nIndex = 0; nIndex < MAXIMUM_BLOCKNAME_LENGTH; nIndex++)
-	{
-		if (ImageName->ImageFileName[nIndex] == 0)
-			break;
-		else
-			nNameLength += sizeof(WCHAR);
-	}
-
-	g_Manager.Name.Length = nNameLength + sizeof(WCHAR);
+	g_Manager.Name.Length = (USHORT)(nNameBytesLength + sizeof(WCHAR));
 	g_Manager.Name.MaximumLength = g_Manager.Name.Length;
 	g_Manager.Name.Buffer = (PWCHAR)&g_Manager.NameBuffer;
 	g_Manager.NameBuffer[0] = L'\\';
-	::memcpy(&g_Manager.NameBuffer[1], ImageName->ImageFileName, nNameLength);
+	::memcpy(&g_Manager.NameBuffer[1], &ImageName->ImageFileName, nNameBytesLength);
 
 	KdPrint((DRIVER_PREFIX "Block Filter - %wZ\n", &g_Manager.Name));
 
