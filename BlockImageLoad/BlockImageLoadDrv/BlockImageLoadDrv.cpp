@@ -4,6 +4,8 @@
 #define DEVICE_PATH L"\\Device\\BlockImageLoad"
 #define SYMLINK_PATH L"\\??\\BlockImageLoad"
 
+#define MAXIMUM_BLOCKNAME_LENGTH 256
+
 //
 // Ioctl code definition
 //
@@ -97,17 +99,23 @@ typedef struct _IMAGE_NT_HEADERS64
 //
 // Custom sturct definition
 //
+typedef struct _BLOCK_IMAGE_MANAGER
+{
+	FAST_MUTEX FastMutex;
+	BOOLEAN Registered;
+	UNICODE_STRING Name;
+	WCHAR NameBuffer[MAXIMUM_BLOCKNAME_LENGTH + 1];
+} BLOCK_IMAGE_MANAGER, *PBLOCK_IMAGE_MANAGER;
+
 typedef struct _BLOCK_IMAGE_INFO
 {
-	WCHAR ImageFileName[256];
+	WCHAR ImageFileName[MAXIMUM_BLOCKNAME_LENGTH];
 } BLOCK_IMAGE_INFO, *PBLOCK_IMAGE_INFO;
 
 //
 // Global variables
 //
-FAST_MUTEX g_FastMutex{ 0 };
-struct : UNICODE_STRING { WCHAR buf[257]; } g_ImageFileName{ };
-BOOLEAN g_Registered = FALSE;
+BLOCK_IMAGE_MANAGER g_Manager = { 0 };
 
 //
 // Prototypes
@@ -121,10 +129,16 @@ NTSTATUS OnDeviceControl(
 	_Inout_ PDEVICE_OBJECT DeviceObject,
 	_Inout_ PIRP Irp
 );
-void LoadImageBlockRoutine(
+VOID LoadImageBlockRoutine(
 	_In_opt_ PUNICODE_STRING FullImageName,
 	_In_ HANDLE ProcessId,
 	_In_ PIMAGE_INFO ImageInfo
+);
+NTSTATUS RemoveImageBlockRoutine();
+NTSTATUS SetImageBlockRoutine(
+	_In_ PBLOCK_IMAGE_INFO ImageName,
+	_In_ ULONG InputLength,
+	_Out_ PULONG_PTR Information
 );
 BOOLEAN WriteBytesToNonWritableBuffer(_In_ PVOID Dst, _In_ PVOID Src, _In_ SIZE_T Len);
 
@@ -133,26 +147,22 @@ BOOLEAN WriteBytesToNonWritableBuffer(_In_ PVOID Dst, _In_ PVOID Src, _In_ SIZE_
 //
 extern "C"
 NTSTATUS DriverEntry(
-	_In_ PDRIVER_OBJECT  DriverObject,
+	_In_ PDRIVER_OBJECT DriverObject,
 	_In_ PUNICODE_STRING RegistryPath)
 {
 	UNREFERENCED_PARAMETER(RegistryPath);
 
 	NTSTATUS ntstatus = STATUS_FAILED_DRIVER_ENTRY;
 	PDEVICE_OBJECT pDeviceObject = nullptr;
+	KdPrint((DRIVER_PREFIX "sizeof(g_Manager.NameBuffer) = %u\n", (ULONG)sizeof(g_Manager.NameBuffer)));
 
 	do
 	{
 		UNICODE_STRING devicePath = RTL_CONSTANT_STRING(DEVICE_PATH);
 		UNICODE_STRING symlinkPath = RTL_CONSTANT_STRING(SYMLINK_PATH);
 
-		g_ImageFileName.Length = 0;
-		g_ImageFileName.MaximumLength = sizeof(UCHAR) * 257;
-		g_ImageFileName.Buffer = (PWCH)&g_ImageFileName.buf;
-		::memset(&g_ImageFileName.buf, 0, sizeof(USHORT) * 257);
-
-		::ExInitializeFastMutex(&g_FastMutex);
-
+		::ExInitializeFastMutex(&g_Manager.FastMutex);
+		g_Manager.Registered = FALSE;
 		ntstatus = ::IoCreateDevice(
 			DriverObject,
 			NULL,
@@ -198,10 +208,10 @@ void DriverUnload(_In_ PDRIVER_OBJECT DriverObject)
 	::IoDeleteSymbolicLink(&symlinkPath);
 	::IoDeleteDevice(DriverObject->DeviceObject);
 
-	if (g_Registered)
+	if (g_Manager.Registered)
 	{
 		::PsRemoveLoadImageNotifyRoutine(LoadImageBlockRoutine);
-		g_Registered = FALSE;
+		g_Manager.Registered = FALSE;
 	}
 
 	KdPrint((DRIVER_PREFIX "Driver is unloaded.\n"));
@@ -217,7 +227,7 @@ NTSTATUS OnCreateClose(
 	NTSTATUS ntstatus = STATUS_SUCCESS;
 	Irp->IoStatus.Status = ntstatus;
 	Irp->IoStatus.Information = 0u;
-	IoCompleteRequest(Irp, 0);
+	IoCompleteRequest(Irp, IO_NO_INCREMENT);
 
 	return ntstatus;
 }
@@ -233,86 +243,131 @@ NTSTATUS OnDeviceControl(
 	ULONG_PTR info = NULL;
 	PIO_STACK_LOCATION irpSp = ::IoGetCurrentIrpStackLocation(Irp);
 	auto& dic = irpSp->Parameters.DeviceIoControl;
-	USHORT nStrLen = 0;
+	PVOID pInputBuffer = Irp->AssociatedIrp.SystemBuffer;
+	ULONG nInputLength = dic.InputBufferLength;
 
 	switch (dic.IoControlCode)
 	{
 	case IOCTL_SET_MODULE_BLOCK:
-		if (dic.InputBufferLength < sizeof(BLOCK_IMAGE_INFO))
-		{
-			ntstatus = STATUS_BUFFER_TOO_SMALL;
-			KdPrint((DRIVER_PREFIX "Input buffer is too small.\n"));
-			break;
-		}
-
-		::ExAcquireFastMutex(&g_FastMutex);
-		::memset(&g_ImageFileName.buf, 0, sizeof(USHORT) * 257);
-
-		for (auto idx = 0; idx < 256; idx++)
-		{
-			if (((USHORT*)Irp->AssociatedIrp.SystemBuffer)[idx] == 0)
-				break;
-			else
-				nStrLen += 2;
-		}
-
-		g_ImageFileName.Length = nStrLen + sizeof(USHORT);
-		g_ImageFileName.buf[0] = L'\\';
-		::memcpy(&g_ImageFileName.buf[1], Irp->AssociatedIrp.SystemBuffer, nStrLen);
-
-		KdPrint((DRIVER_PREFIX "Block Filter - %wZ\n", &g_ImageFileName));
-
-		if (!g_Registered)
-		{
-			ntstatus = ::PsSetLoadImageNotifyRoutine(LoadImageBlockRoutine);
-
-			if (!NT_SUCCESS(ntstatus))
-			{
-				KdPrint((DRIVER_PREFIX "Failed to PsSetLoadImageNotifyRoutine() API (NTSTATUS = 0x%08X).\n", ntstatus));
-
-				g_ImageFileName.Length = 0u;
-				::memset(&g_ImageFileName.buf, 0, sizeof(USHORT) * 257);
-			}
-			else
-			{
-				KdPrint((DRIVER_PREFIX "PsSetLoadImageNotifyRoutine() API is successful.\n"));
-				info = g_ImageFileName.Length;
-				g_Registered = TRUE;
-			}
-		}
-		else
-		{
-			ntstatus = STATUS_SUCCESS;
-			info = g_ImageFileName.Length;
-		}
-
-		::ExReleaseFastMutex(&g_FastMutex);
+	{
+		KdPrint((DRIVER_PREFIX "IOCTL_SET_MODULE_BLOCK is called.\n"));
+		ntstatus = SetImageBlockRoutine((PBLOCK_IMAGE_INFO)pInputBuffer, nInputLength, &info);
 		break;
-
+	}
 	case IOCTL_UNSET_MODULE_BLOCK:
-		::ExAcquireFastMutex(&g_FastMutex);
-
-		if (g_Registered)
-		{
-			::PsRemoveLoadImageNotifyRoutine(LoadImageBlockRoutine);
-			g_ImageFileName.Length = 0u;
-			::memset(&g_ImageFileName.buf, 0, sizeof(USHORT) * 257);
-			g_Registered = FALSE;
-			ntstatus = STATUS_SUCCESS;
-
-			KdPrint((DRIVER_PREFIX "Load Image Notify Callback is unregistered successfully.\n"));
-		}
-		else
-		{
-			KdPrint((DRIVER_PREFIX "Load Image Notify Callback is not registered.\n"));
-		}
-
-		::ExReleaseFastMutex(&g_FastMutex);
+	{
+		KdPrint((DRIVER_PREFIX "IOCTL_UNSET_MODULE_BLOCK is called.\n"));
+		ntstatus = RemoveImageBlockRoutine();
+		break;
+	}
 	}
 
 	Irp->IoStatus.Status = ntstatus;
 	Irp->IoStatus.Information = info;
-	IoCompleteRequest(Irp, 0);
+	IoCompleteRequest(Irp, IO_NO_INCREMENT);
+
+	return ntstatus;
+}
+
+//
+// IOCTL functions
+//
+NTSTATUS RemoveImageBlockRoutine()
+{
+	NTSTATUS ntstatus = STATUS_SUCCESS;
+
+	::ExAcquireFastMutex(&g_Manager.FastMutex);
+
+	if (g_Manager.Registered)
+	{
+		ntstatus = ::PsRemoveLoadImageNotifyRoutine(LoadImageBlockRoutine);
+		g_Manager.Name.Length = 0;
+		g_Manager.Name.MaximumLength = 0;
+		g_Manager.Name.Buffer = nullptr;
+		::memset(&g_Manager.NameBuffer, 0, sizeof(g_Manager.NameBuffer));
+
+		if (!NT_SUCCESS(ntstatus))
+		{
+			KdPrint((DRIVER_PREFIX "Failed to unregister Load Image Notify Callback (NTSTATUS = 0x%08X).\n",
+				ntstatus));
+		}
+		else
+		{
+			g_Manager.Registered = FALSE;
+			KdPrint((DRIVER_PREFIX "Load Image Notify Callback is unregistered successfully.\n"));
+		}
+	}
+	else
+	{
+		KdPrint((DRIVER_PREFIX "Load Image Notify Callback is not registered.\n"));
+	}
+
+	::ExReleaseFastMutex(&g_Manager.FastMutex);
+
+	return ntstatus;
+}
+
+
+NTSTATUS SetImageBlockRoutine(
+	_In_ PBLOCK_IMAGE_INFO ImageName,
+	_In_ ULONG InputLength,
+	_Out_ PULONG_PTR Information)
+{
+	NTSTATUS ntstatus = STATUS_SUCCESS;
+	USHORT nNameLength = 0;
+	*Information = NULL;
+
+	if (ImageName == nullptr)
+		return STATUS_INVALID_ADDRESS;
+	else if (InputLength > sizeof(BLOCK_IMAGE_INFO))
+		return STATUS_NAME_TOO_LONG;
+	else if (InputLength < sizeof(BLOCK_IMAGE_INFO))
+		return STATUS_BUFFER_TOO_SMALL;
+
+	::ExAcquireFastMutex(&g_Manager.FastMutex);
+	::memset(&g_Manager.NameBuffer, 0, sizeof(g_Manager.NameBuffer));
+
+	for (auto nIndex = 0; nIndex < MAXIMUM_BLOCKNAME_LENGTH; nIndex++)
+	{
+		if (ImageName->ImageFileName[nIndex] == 0)
+			break;
+		else
+			nNameLength += sizeof(WCHAR);
+	}
+
+	g_Manager.Name.Length = nNameLength + sizeof(WCHAR);
+	g_Manager.Name.MaximumLength = g_Manager.Name.Length;
+	g_Manager.Name.Buffer = (PWCHAR)&g_Manager.NameBuffer;
+	g_Manager.NameBuffer[0] = L'\\';
+	::memcpy(&g_Manager.NameBuffer[1], ImageName->ImageFileName, nNameLength);
+
+	KdPrint((DRIVER_PREFIX "Block Filter - %wZ\n", &g_Manager.Name));
+
+	if (!g_Manager.Registered)
+	{
+		ntstatus = ::PsSetLoadImageNotifyRoutine(LoadImageBlockRoutine);
+
+		if (!NT_SUCCESS(ntstatus))
+		{
+			KdPrint((DRIVER_PREFIX "Failed to PsSetLoadImageNotifyRoutine() API (NTSTATUS = 0x%08X).\n", ntstatus));
+			g_Manager.Name.Length = 0u;
+			g_Manager.Name.MaximumLength = g_Manager.Name.Length;
+			g_Manager.Name.Buffer = nullptr;
+			::memset(&g_Manager.NameBuffer, 0, sizeof(g_Manager.NameBuffer));
+		}
+		else
+		{
+			KdPrint((DRIVER_PREFIX "PsSetLoadImageNotifyRoutine() API is successful.\n"));
+			*Information = g_Manager.Name.Length;
+			g_Manager.Registered = TRUE;
+		}
+	}
+	else
+	{
+		*Information = g_Manager.Name.Length;
+	}
+
+	::ExReleaseFastMutex(&g_Manager.FastMutex);
 
 	return ntstatus;
 }
@@ -321,7 +376,7 @@ NTSTATUS OnDeviceControl(
 //
 // Load Image Notify Callback routines
 //
-void LoadImageBlockRoutine(
+VOID LoadImageBlockRoutine(
 	_In_opt_ PUNICODE_STRING FullImageName,
 	_In_ HANDLE ProcessId,
 	_In_ PIMAGE_INFO ImageInfo)
@@ -330,12 +385,12 @@ void LoadImageBlockRoutine(
 	UNREFERENCED_PARAMETER(ProcessId);
 #endif
 
-	if ((g_ImageFileName.Length == 0) || (FullImageName == nullptr) || (ImageInfo == nullptr))
+	if ((g_Manager.Name.Length == 0) || (FullImageName == nullptr) || (ImageInfo == nullptr))
 		return;
 
 	KdPrint((DRIVER_PREFIX "%wZ (PID %u) is loaded at 0x%p.\n", FullImageName, HandleToULong(ProcessId), ImageInfo->ImageBase));
 
-	if (::RtlSuffixUnicodeString(&g_ImageFileName, FullImageName, TRUE) && (ImageInfo->ImageBase != nullptr))
+	if (::RtlSuffixUnicodeString(&g_Manager.Name, FullImageName, TRUE) && (ImageInfo->ImageBase != nullptr))
 	{
 		BOOLEAN bOverwritten = FALSE;
 
