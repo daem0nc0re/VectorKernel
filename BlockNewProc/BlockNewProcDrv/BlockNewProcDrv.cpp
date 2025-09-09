@@ -128,7 +128,6 @@ void DriverUnload(_In_ PDRIVER_OBJECT DriverObject)
 	RemoveBlockProcessImageName();
 	::IoDeleteSymbolicLink(&symlinkPath);
 	::IoDeleteDevice(DriverObject->DeviceObject);
-
 	KdPrint((DRIVER_PREFIX "Driver is unloaded.\n"));
 }
 
@@ -243,7 +242,7 @@ NTSTATUS SetBlockProcessImageName(
 
 	nNameBytesLength = ImageName->NameBytesLength;
 
-	if (nNameBytesLength > MAXIMUM_BLOCKNAME_LENGTH + sizeof(WCHAR))
+	if (nNameBytesLength > (MAXIMUM_BLOCKNAME_LENGTH - 1) * sizeof(WCHAR))
 		return STATUS_NAME_TOO_LONG;
 	else if (nNameBytesLength > (MAXUINT16 - sizeof(WCHAR)))
 		return STATUS_NAME_TOO_LONG;
