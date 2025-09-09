@@ -206,15 +206,9 @@ NTSTATUS DriverEntry(
 void DriverUnload(_In_ PDRIVER_OBJECT DriverObject)
 {
 	UNICODE_STRING symlinkPath = RTL_CONSTANT_STRING(SYMLINK_PATH);
+	RemoveImageBlockRoutine();
 	::IoDeleteSymbolicLink(&symlinkPath);
 	::IoDeleteDevice(DriverObject->DeviceObject);
-
-	if (g_Manager.Registered)
-	{
-		::PsRemoveLoadImageNotifyRoutine(LoadImageBlockRoutine);
-		g_Manager.Registered = FALSE;
-	}
-
 	KdPrint((DRIVER_PREFIX "Driver is unloaded.\n"));
 }
 
@@ -316,7 +310,7 @@ NTSTATUS SetImageBlockRoutine(
 {
 	NTSTATUS ntstatus = STATUS_SUCCESS;
 	ULONG nNameBytesLength = 0;
-	ULONG nMinimumLength = FIELD_OFFSET(BLOCK_IMAGE_INFO, NameBytesLength);
+	ULONG nMinimumLength = FIELD_OFFSET(BLOCK_IMAGE_INFO, ImageFileName);
 	*Information = NULL;
 
 	if (ImageName == nullptr)
@@ -326,7 +320,9 @@ NTSTATUS SetImageBlockRoutine(
 
 	nNameBytesLength = ImageName->NameBytesLength;
 
-	if (nNameBytesLength > MAXIMUM_BLOCKNAME_LENGTH * sizeof(WCHAR))
+	if (nNameBytesLength > (MAXIMUM_BLOCKNAME_LENGTH - 1) * sizeof(WCHAR))
+		return STATUS_NAME_TOO_LONG;
+	else if (nNameBytesLength > (MAXUINT16 - sizeof(WCHAR)))
 		return STATUS_NAME_TOO_LONG;
 	else if (InputLength < nMinimumLength + nNameBytesLength)
 		return STATUS_BUFFER_TOO_SMALL;
