@@ -13,20 +13,31 @@ namespace BlockNewProcClient.Library
         public static bool SetBlockProcessName(string imageFileName)
         {
             NTSTATUS ntstatus;
-            IntPtr pInBuffer = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(BLOCK_FILENAME_INFO)));
-            var moduleName = new BLOCK_FILENAME_INFO(imageFileName);
+            byte[] nameBytes;
+            IntPtr pInBuffer;
+            int nInBufferLength;
+            var info = new BLOCK_IMAGE_INFO();
+            var nNameBytesOffset = Marshal.OffsetOf(typeof(BLOCK_IMAGE_INFO), "ImageFileName").ToInt32();
 
-            if (string.IsNullOrEmpty(Path.GetExtension(imageFileName)))
+            if (string.IsNullOrEmpty(imageFileName))
+            {
+                Console.WriteLine("[!] File name is required.");
+                return false;
+            }
+            else if (string.IsNullOrEmpty(Path.GetExtension(imageFileName)))
             {
                 Console.WriteLine("[!] File extension is required.");
                 return false;
             }
 
-            imageFileName = Encoding.Unicode.GetString(moduleName.ImageFileName).TrimEnd('\0');
-            Marshal.StructureToPtr(moduleName, pInBuffer, false);
+            nameBytes = Encoding.Unicode.GetBytes(imageFileName);
+            info.NameBytesLength = (uint)nameBytes.Length;
+            nInBufferLength = nNameBytesOffset + nameBytes.Length;
+            pInBuffer = Marshal.AllocHGlobal(nInBufferLength);
+            Marshal.StructureToPtr(info, pInBuffer, true);
 
-            Console.WriteLine("[>] Sending a query to {0}.", Globals.SYMLINK_PATH);
-            Console.WriteLine("    [*] Target : {0}", imageFileName);
+            for (var oft = 0; oft < nameBytes.Length; oft++)
+                Marshal.WriteByte(pInBuffer, nNameBytesOffset + oft, nameBytes[oft]);
 
             do
             {
@@ -68,7 +79,7 @@ namespace BlockNewProcClient.Library
                     out IO_STATUS_BLOCK _,
                     Globals.IOCTL_SET_PROCESS_FILENAME,
                     pInBuffer,
-                    (uint)Marshal.SizeOf(typeof(BLOCK_FILENAME_INFO)),
+                    (uint)nInBufferLength,
                     IntPtr.Zero,
                     0u);
                 NativeMethods.NtClose(hDevice);

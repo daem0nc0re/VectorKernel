@@ -4,7 +4,7 @@
 #define DEVICE_PATH L"\\Device\\BlockNewProc"
 #define SYMLINK_PATH L"\\??\\BlockNewProc"
 
-#pragma warning(disable: 4996) // This warning is caused when use old ExAllocatePoolWithTag() API.
+#define MAXIMUM_BLOCKNAME_LENGTH 256
 
 //
 // Ioctl code definition
@@ -15,17 +15,24 @@
 //
 // Custom sturct definition
 //
-typedef struct _BLOCK_FILENAME_INFO
+typedef struct _BLOCK_IMAGE_INFO
 {
-	WCHAR ImageFileName[256];
-} BLOCK_FILENAME_INFO, * PBLOCK_FILENAME_INFO;
+	ULONG NameBytesLength;
+	WCHAR ImageFileName[ANY_SIZE];
+} BLOCK_IMAGE_INFO, * PBLOCK_IMAGE_INFO;
+
+typedef struct _BLOCK_IMAGENAME_MANAGER
+{
+	FAST_MUTEX FastMutex;
+	BOOLEAN Registered;
+	UNICODE_STRING Name;
+	WCHAR NameBuffer[MAXIMUM_BLOCKNAME_LENGTH + 1];
+} BLOCK_IMAGENAME_MANAGER, *PBLOCK_IMAGENAME_MANAGER;
 
 //
 // Global variables
 //
-FAST_MUTEX g_FastMutex{ 0 };
-WCHAR g_ImageFileNameSuffix[258]{ 0 }; // top byte for '\', last byte for null-terminator
-BOOLEAN g_CallbackRegistered = FALSE;
+BLOCK_IMAGENAME_MANAGER g_Manager = { 0 };
 
 //
 // Prototypes
@@ -43,6 +50,12 @@ void ProcessBlockRoutine(
 	_Inout_ PEPROCESS Process,
 	_In_ HANDLE ProcessId,
 	_Inout_opt_ PPS_CREATE_NOTIFY_INFO CreateInfo
+);
+NTSTATUS RemoveBlockProcessImageName();
+NTSTATUS SetBlockProcessImageName(
+	_In_ PBLOCK_IMAGE_INFO ImageName,
+	_In_ ULONG InputLength,
+	_Out_ PULONG_PTR Information
 );
 
 //
@@ -68,8 +81,8 @@ NTSTATUS DriverEntry(
 		UNICODE_STRING devicePath = RTL_CONSTANT_STRING(DEVICE_PATH);
 		UNICODE_STRING symlinkPath = RTL_CONSTANT_STRING(SYMLINK_PATH);
 
-		::ExInitializeFastMutex(&g_FastMutex);
-
+		::ExInitializeFastMutex(&g_Manager.FastMutex);
+		g_Manager.Registered = FALSE;
 		ntstatus = ::IoCreateDevice(
 			DriverObject,
 			NULL,
@@ -112,16 +125,9 @@ NTSTATUS DriverEntry(
 void DriverUnload(_In_ PDRIVER_OBJECT DriverObject)
 {
 	UNICODE_STRING symlinkPath = RTL_CONSTANT_STRING(SYMLINK_PATH);
+	RemoveBlockProcessImageName();
 	::IoDeleteSymbolicLink(&symlinkPath);
 	::IoDeleteDevice(DriverObject->DeviceObject);
-
-	if (g_CallbackRegistered)
-	{
-		::PsSetCreateProcessNotifyRoutineEx2(
-			PsCreateProcessNotifySubsystems,
-			(PVOID)ProcessBlockRoutine,
-			TRUE);
-	}
 
 	KdPrint((DRIVER_PREFIX "Driver is unloaded.\n"));
 }
@@ -136,7 +142,7 @@ NTSTATUS OnCreateClose(
 	NTSTATUS ntstatus = STATUS_SUCCESS;
 	Irp->IoStatus.Status = ntstatus;
 	Irp->IoStatus.Information = 0u;
-	IoCompleteRequest(Irp, 0);
+	IoCompleteRequest(Irp, IO_NO_INCREMENT);
 
 	return ntstatus;
 }
@@ -149,86 +155,139 @@ NTSTATUS OnDeviceControl(
 	UNREFERENCED_PARAMETER(DeviceObject);
 
 	NTSTATUS ntstatus = STATUS_INVALID_DEVICE_REQUEST;
+	ULONG_PTR info = NULL;
 	PIO_STACK_LOCATION irpSp = ::IoGetCurrentIrpStackLocation(Irp);
 	auto& dic = irpSp->Parameters.DeviceIoControl;
-	ULONG_PTR info = NULL;
+	PVOID pInputBuffer = Irp->AssociatedIrp.SystemBuffer;
+	ULONG nInputLength = dic.InputBufferLength;
 
 	switch (dic.IoControlCode)
 	{
 	case IOCTL_SET_PROCESS_FILENAME:
-		if (dic.InputBufferLength < sizeof(BLOCK_FILENAME_INFO))
-		{
-			ntstatus = STATUS_BUFFER_TOO_SMALL;
-			break;
-		}
-
-		::ExAcquireFastMutex(&g_FastMutex);
-
-		::memset(g_ImageFileNameSuffix, 0, sizeof(WCHAR) * 258);
-		g_ImageFileNameSuffix[0] = L'\\';
-		::memcpy(&g_ImageFileNameSuffix[1], Irp->AssociatedIrp.SystemBuffer, sizeof(BLOCK_FILENAME_INFO));
-		g_ImageFileNameSuffix[257] = L'\0';
-
-		KdPrint((DRIVER_PREFIX "Target ImageFileName pattern is updated to \"%ws\".\n", &g_ImageFileNameSuffix));
-
-		if (!g_CallbackRegistered)
-		{
-			ntstatus = ::PsSetCreateProcessNotifyRoutineEx2(
-				PsCreateProcessNotifySubsystems,
-				(PVOID)ProcessBlockRoutine,
-				FALSE);
-
-			if (!NT_SUCCESS(ntstatus))
-			{
-				KdPrint((DRIVER_PREFIX "Failed to register Process Notify Routine (NTSTATUS = 0x%08X).", ntstatus));
-				break;
-			}
-			else
-			{
-				g_CallbackRegistered = TRUE;
-				KdPrint((DRIVER_PREFIX "Process Notify Callback is registered successfully.\n"));
-			}
-		}
-
-		::ExReleaseFastMutex(&g_FastMutex);
-
-		info = ::wcslen(g_ImageFileNameSuffix) * sizeof(WCHAR);
-		ntstatus = STATUS_SUCCESS;
-
+	{
+		KdPrint((DRIVER_PREFIX "IOCTL_SET_PROCESS_FILENAME is called.\n"));
+		ntstatus = SetBlockProcessImageName((PBLOCK_IMAGE_INFO)pInputBuffer, nInputLength, &info);
 		break;
-
+	}
 	case IOCTL_UNREGISTER_CALLBACK:
-		::ExAcquireFastMutex(&g_FastMutex);
-
-		if (g_CallbackRegistered)
-		{
-			::memset(g_ImageFileNameSuffix, 0, sizeof(WCHAR) * 258);
-			ntstatus = ::PsSetCreateProcessNotifyRoutineEx2(
-				PsCreateProcessNotifySubsystems,
-				(PVOID)ProcessBlockRoutine,
-				TRUE);
-
-			if (!NT_SUCCESS(ntstatus))
-			{
-				KdPrint((DRIVER_PREFIX "Failed to unregister Process Notify Callback (NTSTATUS = 0x%08X).\n", ntstatus));
-			}
-			else
-			{
-				g_CallbackRegistered = FALSE;
-				KdPrint((DRIVER_PREFIX "Process Notify Callback is unregistered successfully.\n"));
-			}
-		}
-		else
-		{
-			KdPrint((DRIVER_PREFIX "Process Notify Callback is not registered.\n"));
-		}
-
-		::ExReleaseFastMutex(&g_FastMutex);
+	{
+		KdPrint((DRIVER_PREFIX "IOCTL_UNREGISTER_CALLBACK is called.\n"));
+		ntstatus = RemoveBlockProcessImageName();
+		break;
+	}
 	}
 
 	Irp->IoStatus.Status = ntstatus;
 	Irp->IoStatus.Information = info;
-	IoCompleteRequest(Irp, 0);
+	IoCompleteRequest(Irp, IO_NO_INCREMENT);
+
+	return ntstatus;
+}
+
+
+//
+// IOCTL functions
+//
+NTSTATUS RemoveBlockProcessImageName()
+{
+	NTSTATUS ntstatus = STATUS_SUCCESS;
+
+	::ExAcquireFastMutex(&g_Manager.FastMutex);
+
+	if (g_Manager.Registered)
+	{
+		ntstatus = ::PsSetCreateProcessNotifyRoutineEx2(
+			PsCreateProcessNotifySubsystems,
+			(PVOID)ProcessBlockRoutine,
+			TRUE);
+		g_Manager.Name.Length = 0;
+		g_Manager.Name.MaximumLength = g_Manager.Name.Length;
+		g_Manager.Name.Buffer = nullptr;
+		::memset(&g_Manager.NameBuffer, 0, sizeof(g_Manager.NameBuffer));
+
+		if (!NT_SUCCESS(ntstatus))
+		{
+			KdPrint((DRIVER_PREFIX "Failed to unregister Process Notify Callback (NTSTATUS = 0x%08X).\n", ntstatus));
+		}
+		else
+		{
+			g_Manager.Registered = FALSE;
+			KdPrint((DRIVER_PREFIX "Process Notify Callback is unregistered successfully.\n"));
+		}
+	}
+	else
+	{
+		KdPrint((DRIVER_PREFIX "Process Notify Callback is not registered.\n"));
+	}
+
+	::ExReleaseFastMutex(&g_Manager.FastMutex);
+
+	return ntstatus;
+}
+
+
+NTSTATUS SetBlockProcessImageName(
+	_In_ PBLOCK_IMAGE_INFO ImageName,
+	_In_ ULONG InputLength,
+	_Out_ PULONG_PTR Information)
+{
+	NTSTATUS ntstatus = STATUS_SUCCESS;
+	ULONG nNameBytesLength = 0u;
+	ULONG nMinimumLength = FIELD_OFFSET(BLOCK_IMAGE_INFO, ImageFileName);
+	*Information = NULL;
+
+	if (ImageName == nullptr)
+		return STATUS_INVALID_ADDRESS;
+	else if (InputLength < nMinimumLength)
+		return STATUS_BUFFER_TOO_SMALL;
+
+	nNameBytesLength = ImageName->NameBytesLength;
+
+	if (nNameBytesLength > MAXIMUM_BLOCKNAME_LENGTH + sizeof(WCHAR))
+		return STATUS_NAME_TOO_LONG;
+	else if (nNameBytesLength > (MAXUINT16 - sizeof(WCHAR)))
+		return STATUS_NAME_TOO_LONG;
+	else if (InputLength < nMinimumLength + nNameBytesLength)
+		return STATUS_BUFFER_TOO_SMALL;
+
+	::ExAcquireFastMutex(&g_Manager.FastMutex);
+	::memset(&g_Manager.NameBuffer, 0, sizeof(g_Manager.NameBuffer));
+	g_Manager.Name.Length = (USHORT)(nNameBytesLength + sizeof(WCHAR));
+	g_Manager.Name.MaximumLength = g_Manager.Name.Length;
+	g_Manager.Name.Buffer = (PWCHAR)&g_Manager.NameBuffer;
+	g_Manager.NameBuffer[0] = L'\\';
+	::memcpy(&g_Manager.NameBuffer[1], &ImageName->ImageFileName, nNameBytesLength);
+
+	KdPrint((DRIVER_PREFIX "Target ImageFileName pattern is updated to \"%wZ\".\n", &g_Manager.Name));
+
+	if (!g_Manager.Registered)
+	{
+		ntstatus = ::PsSetCreateProcessNotifyRoutineEx2(
+			PsCreateProcessNotifySubsystems,
+			(PVOID)ProcessBlockRoutine,
+			FALSE);
+
+		if (!NT_SUCCESS(ntstatus))
+		{
+			KdPrint((DRIVER_PREFIX "Failed to register Process Notify Routine (NTSTATUS = 0x%08X).", ntstatus));
+			g_Manager.Name.Length = 0;
+			g_Manager.Name.MaximumLength = g_Manager.Name.Length;
+			g_Manager.Name.Buffer = nullptr;
+			::memset(&g_Manager.NameBuffer, 0, sizeof(g_Manager.NameBuffer));
+		}
+		else
+		{
+			KdPrint((DRIVER_PREFIX "Process Notify Callback is registered successfully.\n"));
+			*Information = g_Manager.Name.Length;
+			g_Manager.Registered = TRUE;
+		}
+	}
+	else
+	{
+		*Information = g_Manager.Name.Length;
+	}
+
+	::ExReleaseFastMutex(&g_Manager.FastMutex);
 
 	return ntstatus;
 }
@@ -247,14 +306,11 @@ void ProcessBlockRoutine(
 
 	if (CreateInfo != nullptr)
 	{
-		::ExAcquireFastMutex(&g_FastMutex);
+		::ExAcquireFastMutex(&g_Manager.FastMutex);
 
-		if (::wcslen(g_ImageFileNameSuffix) > 0)
+		if ((g_Manager.Name.Length > 0) && (g_Manager.Name.Buffer != nullptr))
 		{
-			UNICODE_STRING suffix{ 0 };
-			::RtlInitUnicodeString(&suffix, g_ImageFileNameSuffix);
-
-			if (::RtlSuffixUnicodeString(&suffix, (PUNICODE_STRING)CreateInfo->ImageFileName, TRUE))
+			if (::RtlSuffixUnicodeString(&g_Manager.Name, (PUNICODE_STRING)CreateInfo->ImageFileName, TRUE))
 			{
 				CreateInfo->CreationStatus = STATUS_ACCESS_DENIED;
 				KdPrint((DRIVER_PREFIX "Blocked Process: %wZ\n", (PUNICODE_STRING)CreateInfo->ImageFileName));
@@ -269,6 +325,6 @@ void ProcessBlockRoutine(
 			KdPrint((DRIVER_PREFIX "Allowed Process: %wZ\n", (PUNICODE_STRING)CreateInfo->ImageFileName));
 		}
 
-		::ExReleaseFastMutex(&g_FastMutex);
+		::ExReleaseFastMutex(&g_Manager.FastMutex);
 	}
 }
