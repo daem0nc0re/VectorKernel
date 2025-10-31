@@ -49,12 +49,6 @@ namespace MemReadClient.Handler
                 }
                 else
                 {
-                    if (!hexPattern.IsMatch(options.GetValue("base")))
-                    {
-                        Console.WriteLine("[-] Base address should be specfied in hex format.");
-                        break;
-                    }
-
                     try
                     {
                         if (Environment.Is64BitProcess)

@@ -604,7 +604,7 @@ NTSTATUS ReadMemoryFromProcess(
 
 		nReadOffset = (ULONG)((ULONG_PTR)BaseAddress - (ULONG_PTR)mbi.BaseAddress);
 
-		if ((NumberOfBytesToRead - nReadOffset) > (ULONG)mbi.RegionSize)
+		if ((NumberOfBytesToRead + nReadOffset) > (ULONG)mbi.RegionSize)
 			NumberOfBytesToRead = (ULONG)mbi.RegionSize - nReadOffset;
 
 		if ((mbi.Type & (MEM_MAPPED | MEM_IMAGE)) != 0)
