@@ -104,12 +104,12 @@ NTSTATUS GetMemoryBasicInformation(
 	_Out_ PVOID *Buffer,
 	_Out_ ULONG *Length
 );
-PVOID GetPebAddress(_In_ HANDLE ProcessHandle, _Out_ PVOID* pPeb32);
+PVOID GetPebAddress(_In_ HANDLE ProcessHandle, _Out_ PVOID *Peb32);
 NTSTATUS ReadMemoryFromProcess(
 	_In_ ULONG ProcessId,
 	_In_ PVOID BaseAddress,
 	_In_ ULONG NumberOfBytesToRead,
-	_Out_ PIOCTL_READ_MEMORY_OUTPUT* MemoryData
+	_Out_ PIOCTL_READ_MEMORY_OUTPUT *MemoryData
 );
 VOID ReleaseMemoryInformationBuffer();
 BOOLEAN IsUserAddress(_In_ PVOID BaseAddress);
@@ -824,7 +824,7 @@ NTSTATUS GetMemoryBasicInformation(
 }
 
 
-PVOID GetPebAddress(_In_ HANDLE ProcessHandle, _Out_ PVOID *pPeb32)
+PVOID GetPebAddress(_In_ HANDLE ProcessHandle, _Out_ PVOID *Peb32)
 {
 	PVOID pPeb = nullptr;
 	PROCESS_BASIC_INFORMATION pbi{ 0 };
@@ -835,21 +835,21 @@ PVOID GetPebAddress(_In_ HANDLE ProcessHandle, _Out_ PVOID *pPeb32)
 		&pbi,
 		sizeof(pbi),
 		&nReturnedLength);
-	*pPeb32 = nullptr;
+	*Peb32 = nullptr;
 
 	if (NT_SUCCESS(ntstatus))
 	{
-		PVOID pPeb32Buffer = nullptr;
+		PVOID pPeb32 = nullptr;
 		pPeb = pbi.PebBaseAddress;
 		ntstatus = ZwQueryInformationProcess(
 			ProcessHandle,
 			ProcessWow64Information,
-			&pPeb32Buffer,
+			&pPeb32,
 			sizeof(PVOID),
 			&nReturnedLength);
 
 		if (NT_SUCCESS(ntstatus))
-			*pPeb32 = pPeb32Buffer;
+			*Peb32 = pPeb32;
 	}
 
 	return pPeb;
