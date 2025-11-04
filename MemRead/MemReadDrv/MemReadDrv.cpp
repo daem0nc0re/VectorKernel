@@ -579,6 +579,7 @@ NTSTATUS ReadMemoryFromProcess(
 	if (!NT_SUCCESS(ntstatus))
 	{
 		KdPrint((DRIVER_PREFIX "Failed to lookup EPROCESS for the target process (NTSTATUS = 0x%08X).\n", ntstatus));
+		::ZwClose(hProcess);
 		return ntstatus;
 	}
 
