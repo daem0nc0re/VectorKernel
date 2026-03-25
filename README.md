@@ -34,6 +34,7 @@ All modules are tested in Windows 11.
 | [GetKeyStroke](./GetKeyStroke/) | PoCs to log keyboard action with kernel driver. |
 | [GetProcHandle](./GetProcHandle/) | PoCs to get full access process handle from kernelmode. |
 | [InjectLibrary](./InjectLibrary/) | PoCs to perform DLL injection with Kernel APC Injection method. |
+| [MemRead](./MemRead/) | PoCs to read arbitrary process memory. |
 | [ModHide](./ModHide/) | PoCs to hide loaded kernel drivers with DKOM method. |
 | [ProcHide](./ProcHide/) | PoCs to hide process with DKOM method. |
 | [ProcProtect](./ProcProtect/) | PoCs to manipulate Protected Process. |
